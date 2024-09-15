@@ -1,11 +1,13 @@
+// A simple Digital Clock That runs on the terminal
+
 #include <stdio.h>
 #include <time.h>
 #include <unistd.h>
 #include <stdlib.h>
 
-// Define a macro to check the operating system
+// Trying to make the application cros-platform (window & linux)
 #ifdef _WIN32
-#include <windows.h> // Include Windows-specific header
+#include <windows.h> 
 #define CLEAR "cls"  // Command to clear the screen in Windows
 #else
 #define CLEAR "clear" // Command to clear the screen in Linux/Unix
@@ -17,17 +19,17 @@ void printTime(int format)
     time_t rawtime;
     struct tm *timeinfo;
 
-    // Get the current system time
+    // Getting the Current System Time
     time(&rawtime);
     timeinfo = localtime(&rawtime);
 
-    // Determine the hour based on the selected format
+    // Determining the hour based on the selected format
     int hour = timeinfo->tm_hour;
     if (format == 12)
     {
         if (hour == 0)
         {
-            hour = 12; // Midnight case (12 AM)
+            hour = 12; // Incase of midnight (12 AM)
         }
         else if (hour > 12)
         {
@@ -35,7 +37,7 @@ void printTime(int format)
         }
     }
 
-    // Print the current time in the selected format
+    // Printing the current time in the selected format
     printf("%02d : %02d : %02d %s\n",
            hour,
            timeinfo->tm_min,
@@ -50,16 +52,17 @@ void clearScreen()
 }
 
 // Cross-platform sleep function
+// in windows sleep takes in milliseconds while linux sleep takes in seconds
 void performSleep(int seconds)
 {
 #ifdef _WIN32
-    Sleep(seconds * 1000); // Sleep takes milliseconds in Windows
+    Sleep(seconds * 1000);
 #else
-    sleep(seconds); // Sleep takes seconds in Linux/Unix
+    sleep(seconds); 
 #endif
 }
 
-// Function to get time format from the user
+// Prompting user on what clock format he/she prefers (12hr, 24hr)
 int getTimeFormat()
 {
     int format = 0;
@@ -78,17 +81,13 @@ int getTimeFormat()
 // Main function
 int main()
 {
-    int format = getTimeFormat(); // Get user preference for time format
+    int format = getTimeFormat(); // Getting user preferred time format
 
     while (1)
     {
         clearScreen(); // Clear the screen
-
-        // Print the current time
-        printTime(format);
-
-        // Perform sleep for 1 second
-        performSleep(1);
+        printTime(format); // print time
+        performSleep(1); // perform one sec sleep
     }
 
     return 0;
