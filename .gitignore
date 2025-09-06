@@ -1,0 +1,22 @@
+# Compiled binaries
+digital_clock
+digital_clock.exe
+digital_clock_tests
+digital_clock_tests.exe
+*.o
+*.obj
+
+# Platform specific files
+.DS_Store
+Thumbs.db
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
