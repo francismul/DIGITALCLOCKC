@@ -1,0 +1,45 @@
+name: Build and Release Digital Clock
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install MinGW (GCC for Windows)
+        uses: egor-tensin/setup-mingw@v2
+        with:
+          platform: x64
+
+      - name: Build executable
+        run: gcc -o digitalclock.exe index_gui.c -mwindows -luser32 -lgdi32
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: digitalclock-exe
+          path: digitalclock.exe
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: digitalclock-exe
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: digitalclock.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
