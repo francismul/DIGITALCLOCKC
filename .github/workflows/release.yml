@@ -19,7 +19,7 @@ jobs:
           platform: x64
 
       - name: Build executable
-        run: gcc -o digitalclock.exe index_gui.c -mwindows -luser32 -lgdi32
+        run: gcc -o digitalclock.exe digital_clock_win32.c -mwindows -luser32 -lgdi32
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
