@@ -19,12 +19,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install MinGW (GCC for Windows)
-        uses: egor-tensin/setup-mingw@v2
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
         with:
-          platform: x64
+          msystem: MINGW64
+          install: mingw-w64-x86_64-gcc
 
       - name: Build executable
+        shell: msys2 {0}
         run: gcc -o digitalclock.exe digital_clock_win32.c -mwindows -luser32 -lgdi32
 
       - name: Upload build artifact
