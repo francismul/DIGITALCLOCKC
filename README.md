@@ -100,20 +100,6 @@ digital_clock_gui.exe
    - **D** or **d**: Toggle date display on/off
 4. Close the window or press Alt+F4 to exit
 
-## Code Structure
-
-```
-DIGITALCLOCKC/
-├── index.c                    # Cross-platform terminal implementation
-├── digital_clock_win32.c      # Windows GUI implementation
-├── test/                      # Test files and framework
-│   ├── test_digital_clock_win32_tests.c
-│   ├── lib/acutest.h         # Testing framework
-│   └── run.sh                # Test runner script
-├── VERSION                    # Current version (v1.0.0)
-├── RELEASE_INSTRUCTIONS.md    # Release process documentation
-└── README.md                 # This file
-```
 
 ## Key Functions
 
@@ -146,22 +132,12 @@ DIGITALCLOCKC/
 - Add appropriate comments for complex logic
 - Update documentation for new features
 
-## Testing
-
-The project includes a test suite for the GUI version:
-
-```bash
-# Build and run tests (Linux/macOS with clang)
-cd test
-clang -Wall -Itest -DTEST_STUBS -o digital_clock_tests test_digital_clock_win32_tests.c
-./digital_clock_tests
-```
 
 ## Version Information
 
 - **Current Version**: v1.0.0
 - **License**: [Add license information]
-- **Author**: Francis Mulumba (francismul)
+- **Author**: Francis Mule (francismul)
 
 ## Platform-Specific Notes
 
