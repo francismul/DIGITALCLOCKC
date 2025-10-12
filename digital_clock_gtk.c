@@ -232,6 +232,11 @@ void show_context_menu(GtkWidget *widget, GdkEventButton *event)
         
         // Display the menu
         gtk_menu_popup_at_pointer(GTK_MENU(menu), (GdkEvent*)event);
+        
+        // Release our reference to the menu to avoid memory leaks
+        // GTK keeps the menu alive during popup, so we can safely drop our reference
+        g_object_ref_sink(menu);
+        g_object_unref(menu);
     }
 }
 

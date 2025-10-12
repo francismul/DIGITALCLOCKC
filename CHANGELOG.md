@@ -151,7 +151,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Future versions may include:
 - macOS native GUI implementation
-- Linux GTK GUI version
 - Customizable color themes
 - Alarm and timer functionality
 - Multiple timezone support
