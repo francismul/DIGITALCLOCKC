@@ -7,16 +7,48 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version tag (e.g., v1.0.0)"
+        description: "Version tag (e.g., v2.0.0)"
         required: true
-        default: "v1.0.0"
+        default: "v2.0.0"
 
 permissions:
   contents: write
   packages: write
 
 jobs:
-  build:
+  build-linux:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libgtk-3-dev pkg-config
+          
+      - name: Build terminal version
+        run: |
+          gcc -o digital_clock_terminal index.c
+          
+      - name: Build GTK GUI version
+        run: |
+          gcc -o digital_clock_gtk digital_clock_gtk.c $(pkg-config --cflags --libs gtk+-3.0)
+          
+      - name: Create tarball
+        run: |
+          mkdir -p dist
+          tar -czf dist/digital-clock-linux-v${{ github.event.inputs.version || github.ref_name }}.tar.gz \
+            digital_clock_terminal digital_clock_gtk README.md LICENSE CHANGELOG.md
+            
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-builds
+          path: dist/
+
+  build-windows:
     runs-on: windows-latest
 
     steps:
@@ -29,32 +61,159 @@ jobs:
           msystem: MINGW64
           install: mingw-w64-x86_64-gcc
 
-      - name: Build executable
+      - name: Build terminal version
         shell: msys2 {0}
-        run: gcc -o digitalclock.exe digital_clock_win32.c -mwindows -luser32 -lgdi32
+        run: gcc -o digital_clock_terminal.exe index.c
 
-      - name: Upload build artifact
+      - name: Build Windows GUI version
+        shell: msys2 {0}
+        run: gcc -o digital_clock_win32.exe digital_clock_win32.c -mwindows -luser32 -lgdi32
+
+      - name: Create Windows package
+        shell: bash
+        run: |
+          mkdir -p dist
+          zip -j dist/digital-clock-windows-v${{ github.event.inputs.version || github.ref_name }}.zip \
+            digital_clock_terminal.exe digital_clock_win32.exe README.md LICENSE CHANGELOG.md
+
+      - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: digitalclock-exe
-          path: digitalclock.exe
+          name: windows-builds
+          path: dist/
+
+  build-cross-platform:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Install cross-compilation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential mingw-w64 libgtk-3-dev pkg-config
+          
+      - name: Build Linux terminal version
+        run: |
+          gcc -o digital_clock_terminal_linux index.c
+          
+      - name: Build Linux GTK version
+        run: |
+          gcc -o digital_clock_gtk_linux digital_clock_gtk.c $(pkg-config --cflags --libs gtk+-3.0)
+          
+      - name: Cross-compile Windows versions
+        run: |
+          x86_64-w64-mingw32-gcc -o digital_clock_terminal_windows.exe index.c
+          x86_64-w64-mingw32-gcc -o digital_clock_win32_windows.exe digital_clock_win32.c -lgdi32 -luser32
+          
+      - name: Create source package
+        run: |
+          mkdir -p dist
+          tar -czf dist/digital-clock-source-v${{ github.event.inputs.version || github.ref_name }}.tar.gz \
+            --exclude='.git*' --exclude='dist' --exclude='digital_clock*' .
+            
+      - name: Upload cross-platform artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cross-platform-builds
+          path: dist/
 
   release:
-    needs: build
+    needs: [build-linux, build-windows, build-cross-platform]
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download build artifact
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Download Linux artifacts
         uses: actions/download-artifact@v4
         with:
-          name: digitalclock-exe
-          path: dist
+          name: linux-builds
+          path: dist/
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-builds
+          path: dist/
+
+      - name: Download cross-platform artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: cross-platform-builds
+          path: dist/
+
+      - name: List all artifacts
+        run: ls -la dist/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ github.token }}
-          files: dist/digitalclock.exe
+          files: |
+            dist/digital-clock-linux-v${{ github.event.inputs.version || github.ref_name }}.tar.gz
+            dist/digital-clock-windows-v${{ github.event.inputs.version || github.ref_name }}.zip
+            dist/digital-clock-source-v${{ github.event.inputs.version || github.ref_name }}.tar.gz
           tag_name: ${{ github.event.inputs.version || github.ref_name }}
-          name: Release ${{ github.event.inputs.version || github.ref_name }}
+          name: Digital Clock ${{ github.event.inputs.version || github.ref_name }}
+          body: |
+            ## Digital Clock ${{ github.event.inputs.version || github.ref_name }}
+            
+            ### Downloads
+            
+            **Linux (Ubuntu/Debian/Fedora/Arch)**
+            - `digital-clock-linux-v${{ github.event.inputs.version || github.ref_name }}.tar.gz` - Contains both terminal and GTK GUI versions
+            
+            **Windows**
+            - `digital-clock-windows-v${{ github.event.inputs.version || github.ref_name }}.zip` - Contains both terminal and Win32 GUI versions
+            
+            **Source Code**
+            - `digital-clock-source-v${{ github.event.inputs.version || github.ref_name }}.tar.gz` - Complete source code with build instructions
+            
+            ### What's Included
+            
+            #### Linux Package
+            - `digital_clock_terminal` - Cross-platform terminal version
+            - `digital_clock_gtk` - Native Linux GTK3 GUI version
+            - Documentation (README.md, LICENSE, CHANGELOG.md)
+            
+            #### Windows Package  
+            - `digital_clock_terminal.exe` - Cross-platform terminal version
+            - `digital_clock_win32.exe` - Native Windows Win32 GUI version
+            - Documentation (README.md, LICENSE, CHANGELOG.md)
+            
+            ### System Requirements
+            
+            **Linux GTK Version:**
+            - GTK3 libraries (usually pre-installed)
+            - X11 or Wayland display server
+            
+            **Windows Version:**
+            - Windows 7 or later
+            - No additional dependencies required
+            
+            **Terminal Version:**
+            - Any system with a terminal/command prompt
+            
+            ### Quick Start
+            
+            **Linux:**
+            ```bash
+            tar -xzf digital-clock-linux-v${{ github.event.inputs.version || github.ref_name }}.tar.gz
+            chmod +x digital_clock_terminal digital_clock_gtk
+            ./digital_clock_gtk  # For GUI version
+            # or
+            ./digital_clock_terminal  # For terminal version
+            ```
+            
+            **Windows:**
+            ```cmd
+            # Extract the zip file
+            # Double-click digital_clock_win32.exe for GUI version
+            # or run digital_clock_terminal.exe for terminal version
+            ```
+            
+            For detailed build instructions and documentation, see the included README.md file or visit the repository.
           generate_release_notes: true

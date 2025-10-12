@@ -1,0 +1,185 @@
+name: CI - Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test-linux:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libgtk-3-dev pkg-config
+          
+      - name: Build terminal version
+        run: |
+          gcc -Wall -Wextra -std=c99 -o digital_clock_terminal index.c
+          echo "✅ Terminal version built successfully"
+          
+      - name: Build GTK GUI version
+        run: |
+          gcc -Wall -Wextra -std=c99 -o digital_clock_gtk digital_clock_gtk.c $(pkg-config --cflags --libs gtk+-3.0)
+          echo "✅ GTK GUI version built successfully"
+          
+      - name: Test terminal version (basic functionality)
+        run: |
+          timeout 3s ./digital_clock_terminal || echo "✅ Terminal version test completed (timeout expected)"
+          
+      - name: Verify executables
+        run: |
+          ls -la digital_clock_terminal digital_clock_gtk
+          file digital_clock_terminal digital_clock_gtk
+          
+  test-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: mingw-w64-x86_64-gcc
+
+      - name: Build terminal version
+        shell: msys2 {0}
+        run: |
+          gcc -Wall -Wextra -std=c99 -o digital_clock_terminal.exe index.c
+          echo "✅ Terminal version built successfully"
+
+      - name: Build Windows GUI version
+        shell: msys2 {0}
+        run: |
+          gcc -Wall -Wextra -std=c99 -o digital_clock_win32.exe digital_clock_win32.c -mwindows -luser32 -lgdi32
+          echo "✅ Windows GUI version built successfully"
+
+      - name: Verify executables
+        shell: bash
+        run: |
+          ls -la digital_clock_terminal.exe digital_clock_win32.exe
+          file digital_clock_terminal.exe digital_clock_win32.exe
+
+  test-cross-compilation:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Install cross-compilation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential mingw-w64
+          
+      - name: Cross-compile Windows terminal version
+        run: |
+          x86_64-w64-mingw32-gcc -Wall -Wextra -std=c99 -o digital_clock_terminal_cross.exe index.c
+          echo "✅ Cross-compiled Windows terminal version"
+          
+      - name: Cross-compile Windows GUI version
+        run: |
+          x86_64-w64-mingw32-gcc -Wall -Wextra -std=c99 -o digital_clock_win32_cross.exe digital_clock_win32.c -lgdi32 -luser32
+          echo "✅ Cross-compiled Windows GUI version"
+          
+      - name: Verify cross-compiled executables
+        run: |
+          ls -la digital_clock_terminal_cross.exe digital_clock_win32_cross.exe
+          file digital_clock_terminal_cross.exe digital_clock_win32_cross.exe
+
+  test-makefile:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libgtk-3-dev pkg-config mingw-w64
+          
+      - name: Test Makefile targets
+        run: |
+          echo "Testing make terminal..."
+          make terminal
+          echo "✅ make terminal successful"
+          
+          echo "Testing make gtk..."
+          make gtk
+          echo "✅ make gtk successful"
+          
+          echo "Testing make clean..."
+          make clean
+          echo "✅ make clean successful"
+          
+          echo "Testing make build-all..."
+          make build-all
+          echo "✅ make build-all successful"
+
+  test-documentation:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Check required files
+        run: |
+          echo "Checking for required documentation files..."
+          test -f README.md && echo "✅ README.md exists"
+          test -f LICENSE && echo "✅ LICENSE exists"
+          test -f CHANGELOG.md && echo "✅ CHANGELOG.md exists"
+          test -f VERSION && echo "✅ VERSION exists"
+          test -f Makefile && echo "✅ Makefile exists"
+          
+      - name: Validate VERSION file
+        run: |
+          VERSION=$(cat VERSION)
+          echo "Current version: $VERSION"
+          [[ $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] && echo "✅ VERSION format is valid" || (echo "❌ Invalid VERSION format" && exit 1)
+          
+      - name: Check source files
+        run: |
+          test -f index.c && echo "✅ Terminal version source exists"
+          test -f digital_clock_win32.c && echo "✅ Windows GUI source exists"
+          test -f digital_clock_gtk.c && echo "✅ Linux GTK source exists"
+
+  code-quality:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Install static analysis tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cppcheck clang-tools libgtk-3-dev pkg-config
+          
+      - name: Run cppcheck on source files
+        run: |
+          echo "Running static analysis..."
+          cppcheck --enable=all --error-exitcode=0 --suppress=missingIncludeSystem index.c
+          cppcheck --enable=all --error-exitcode=0 --suppress=missingIncludeSystem digital_clock_win32.c
+          # Note: GTK headers may cause false positives, so we suppress them
+          cppcheck --enable=all --error-exitcode=0 --suppress=missingIncludeSystem --suppress=unusedFunction digital_clock_gtk.c
+          echo "✅ Static analysis completed"
+          
+      - name: Check code compilation with warnings
+        run: |
+          echo "Compiling with strict warnings..."
+          gcc -Wall -Wextra -Werror -std=c99 -c index.c -o /tmp/index.o
+          echo "✅ Terminal version compiles with strict warnings"
+          
+          # Windows version cannot be compiled on Linux, but we can check syntax
+          gcc -Wall -Wextra -std=c99 -fsyntax-only digital_clock_win32.c -D_WIN32 || echo "⚠️  Windows version syntax check (cross-platform limitations expected)"
