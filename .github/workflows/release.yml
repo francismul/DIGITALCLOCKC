@@ -59,7 +59,7 @@ jobs:
         uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
-          install: mingw-w64-x86_64-gcc
+          install: mingw-w64-x86_64-gcc zip
 
       - name: Build terminal version
         shell: msys2 {0}
@@ -70,10 +70,11 @@ jobs:
         run: gcc -o digital_clock_win32.exe digital_clock_win32.c -mwindows -luser32 -lgdi32
 
       - name: Create Windows package
-        shell: bash
+        shell: msys2 {0}
         run: |
           mkdir -p dist
-          zip -j dist/digital-clock-windows-v${{ github.event.inputs.version || github.ref_name }}.zip \
+          version="${{ github.event.inputs.version || github.ref_name }}"
+          zip -j dist/digital-clock-windows-$version.zip \
             digital_clock_terminal.exe digital_clock_win32.exe README.md LICENSE CHANGELOG.md
 
       - name: Upload Windows artifacts
@@ -154,7 +155,7 @@ jobs:
           token: ${{ github.token }}
           files: |
             dist/digital-clock-linux-v${{ github.event.inputs.version || github.ref_name }}.tar.gz
-            dist/digital-clock-windows-v${{ github.event.inputs.version || github.ref_name }}.zip
+            dist/digital-clock-windows-${{ github.event.inputs.version || github.ref_name }}.zip
             dist/digital-clock-source-v${{ github.event.inputs.version || github.ref_name }}.tar.gz
           tag_name: ${{ github.event.inputs.version || github.ref_name }}
           name: Digital Clock ${{ github.event.inputs.version || github.ref_name }}
@@ -167,7 +168,7 @@ jobs:
             - `digital-clock-linux-v${{ github.event.inputs.version || github.ref_name }}.tar.gz` - Contains both terminal and GTK GUI versions
             
             **Windows**
-            - `digital-clock-windows-v${{ github.event.inputs.version || github.ref_name }}.zip` - Contains both terminal and Win32 GUI versions
+            - `digital-clock-windows-${{ github.event.inputs.version || github.ref_name }}.zip` - Contains both terminal and Win32 GUI versions
             
             **Source Code**
             - `digital-clock-source-v${{ github.event.inputs.version || github.ref_name }}.tar.gz` - Complete source code with build instructions
