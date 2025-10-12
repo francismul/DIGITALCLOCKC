@@ -125,7 +125,7 @@ jobs:
           set -euo pipefail
           mkdir -p dist
           version="${{ github.event.inputs.version || github.ref_name }}"
-          tar -czf "dist/digital-clock-source-v${version}.tar.gz" \
+          tar -czf "dist/digital-clock-linux-${version}.tar.gz" \
             --exclude='.git*' --exclude='dist' --exclude='digital_clock*' .
             
       - name: Upload cross-platform artifacts
@@ -169,9 +169,9 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: |
-            dist/digital-clock-linux-v${{ github.event.inputs.version || github.ref_name }}.tar.gz
+            dist/digital-clock-linux-${{ github.event.inputs.version || github.ref_name }}.tar.gz
             dist/digital-clock-windows-${{ github.event.inputs.version || github.ref_name }}.zip
-            dist/digital-clock-source-v${{ github.event.inputs.version || github.ref_name }}.tar.gz
+            dist/digital-clock-source-${{ github.event.inputs.version || github.ref_name }}.tar.gz
           tag_name: ${{ github.event.inputs.version || github.ref_name }}
           name: Digital Clock ${{ github.event.inputs.version || github.ref_name }}
           body: |
@@ -180,13 +180,13 @@ jobs:
             ### Downloads
             
             **Linux (Ubuntu/Debian/Fedora/Arch)**
-            - `digital-clock-linux-v${{ github.event.inputs.version || github.ref_name }}.tar.gz` - Contains both terminal and GTK GUI versions
+            - `digital-clock-linux-${{ github.event.inputs.version || github.ref_name }}.tar.gz` - Contains both terminal and GTK GUI versions
             
             **Windows**
             - `digital-clock-windows-${{ github.event.inputs.version || github.ref_name }}.zip` - Contains both terminal and Win32 GUI versions
             
             **Source Code**
-            - `digital-clock-source-v${{ github.event.inputs.version || github.ref_name }}.tar.gz` - Complete source code with build instructions
+            - `digital-clock-source-${{ github.event.inputs.version || github.ref_name }}.tar.gz` - Complete source code with build instructions
             
             ### What's Included
             
@@ -217,7 +217,7 @@ jobs:
             
             **Linux:**
             ```bash
-            tar -xzf digital-clock-linux-v${{ github.event.inputs.version || github.ref_name }}.tar.gz
+            tar -xzf digital-clock-linux-${{ github.event.inputs.version || github.ref_name }}.tar.gz
             chmod +x digital_clock_terminal digital_clock_gtk
             ./digital_clock_gtk  # For GUI version
             # or
