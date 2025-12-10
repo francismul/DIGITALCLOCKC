@@ -110,10 +110,15 @@ static void maybe_print_dragon(void) {
             CW_USEDEFAULT, CW_USEDEFAULT, WINDOW_WIDTH, WINDOW_HEIGHT,
             NULL, NULL, wc.hInstance, NULL);
 
+        HDC dc = GetDC(wnd);
+        if (!dc) {
+            return 1;
+        }
+
         font = nk_gdifont_create("Arial", 18);
         big_font = nk_gdifont_create("Arial", 48);
         footer_font = nk_gdifont_create_with_style("Arial", 18, FW_NORMAL, TRUE);
-        ctx = nk_gdi_init(font, wnd, WINDOW_WIDTH, WINDOW_HEIGHT);
+        ctx = nk_gdi_init(font, dc, WINDOW_WIDTH, WINDOW_HEIGHT);
 
         if (big_font) {
             nk_gdi_set_font(big_font);
@@ -152,6 +157,7 @@ static void maybe_print_dragon(void) {
             platform_sleep_ms(30); 
         }
 
+        ReleaseDC(wnd, dc);
         nk_gdifont_del(font);
         if (big_font) nk_gdifont_del(big_font);
         if (footer_font && footer_font != font) nk_gdifont_del(footer_font);
