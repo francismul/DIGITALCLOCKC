@@ -136,6 +136,10 @@ static struct  {
 } xlib;
 
 NK_INTERN double
+/**
+ * Get current time in seconds since the Unix epoch with microsecond precision.
+ * @returns Current time in seconds since the Unix epoch as a `double`; returns `0` on error.
+ */
 nk_get_time(void)
 {
     struct timeval tv;
@@ -143,6 +147,11 @@ nk_get_time(void)
     return ((double)tv.tv_sec + (double)tv.tv_usec/1000000);
 }
 
+/**
+ * Convert a 3-byte RGB color to an X11-compatible pixel value.
+ * @param c Pointer to three bytes representing red, green, and blue components in that order.
+ * @returns An unsigned long pixel value with red in bits 16–23, green in bits 8–15, and blue in bits 0–7.
+ */
 NK_INTERN unsigned long
 nk_color_from_byte(const nk_byte *c)
 {
@@ -153,6 +162,20 @@ nk_color_from_byte(const nk_byte *c)
     return (res);
 }
 
+/**
+ * Create an off-screen X rendering surface with the given dimensions for the specified screen.
+ *
+ * Allocates and initializes an XSurface structure, creates a graphics context and an off-screen
+ * pixmap sized w-by-h (and an XftDraw when XFT is enabled). The returned surface holds the
+ * display, screen and root references used for subsequent drawing and blitting.
+ *
+ * @param screen X11 screen number to use for visuals and default depth.
+ * @param w      Width in pixels of the off-screen surface.
+ * @param h      Height in pixels of the off-screen surface.
+ *
+ * @returns Pointer to a newly allocated XSurface populated with X resources (GC, pixmap, etc.).
+ *          The caller is responsible for releasing these resources (e.g., via nk_xsurf_del).
+ */
 NK_INTERN XSurface*
 nk_xsurf_create(int screen, unsigned int w, unsigned int h)
 {
@@ -173,6 +196,18 @@ nk_xsurf_create(int screen, unsigned int w, unsigned int h)
     return surface;
 }
 
+/**
+ * Resize the XSurface's backing drawable to the specified pixel dimensions.
+ *
+ * Frees the existing pixmap (if any), updates the surface width and height,
+ * and creates a new pixmap matching the new dimensions and the display depth.
+ * When Xft is enabled, the XftDraw associated with the surface is updated
+ * to target the new drawable.
+ *
+ * @param surf Pointer to the XSurface to resize.
+ * @param w New width in pixels.
+ * @param h New height in pixels.
+ */
 NK_INTERN void
 nk_xsurf_resize(XSurface *surf, unsigned int w, unsigned int h)
 {
@@ -187,6 +222,20 @@ nk_xsurf_resize(XSurface *surf, unsigned int w, unsigned int h)
 #endif
 }
 
+/**
+ * Set the current drawing clip to the given rectangle (in surface pixels),
+ * expanding the rectangle by 1 pixel on all sides.
+ *
+ * Subsequent drawing operations on the surface are constrained to this clip.
+ * When Xft is enabled, the clip is applied to both the surface GC and the
+ * XftDraw associated with the surface.
+ *
+ * @param surf Target surface whose clipping region will be set.
+ * @param x    X coordinate of the clip rectangle origin (pixels).
+ * @param y    Y coordinate of the clip rectangle origin (pixels).
+ * @param w    Width of the clip rectangle (pixels).
+ * @param h    Height of the clip rectangle (pixels).
+ */
 NK_INTERN void
 nk_xsurf_scissor(XSurface *surf, float x, float y, float w, float h)
 {
@@ -202,6 +251,20 @@ nk_xsurf_scissor(XSurface *surf, float x, float y, float w, float h)
 #endif
 }
 
+/**
+ * Draw a straight stroked line on the given surface.
+ *
+ * Draws a line between (x0, y0) and (x1, y1) onto surf using the specified
+ * line_thickness and color.
+ *
+ * @param surf Target XSurface to draw into.
+ * @param x0   X coordinate of the start point.
+ * @param y0   Y coordinate of the start point.
+ * @param x1   X coordinate of the end point.
+ * @param y1   Y coordinate of the end point.
+ * @param line_thickness Thickness of the stroked line in pixels.
+ * @param col  Color to use for the line.
+ */
 NK_INTERN void
 nk_xsurf_stroke_line(XSurface *surf, short x0, short y0, short x1,
     short y1, unsigned int line_thickness, struct nk_color col)
@@ -213,6 +276,18 @@ nk_xsurf_stroke_line(XSurface *surf, short x0, short y0, short x1,
     XSetLineAttributes(surf->dpy, surf->gc, 1, LineSolid, CapButt, JoinMiter);
 }
 
+/**
+ * Draw a stroked rectangle on the given XSurface, optionally with rounded corners.
+ *
+ * @param surf Target surface on which to draw.
+ * @param x X coordinate of the rectangle's top-left corner.
+ * @param y Y coordinate of the rectangle's top-left corner.
+ * @param w Width of the rectangle in pixels.
+ * @param h Height of the rectangle in pixels.
+ * @param r Corner radius in pixels; if `r` is 0 a standard rectangle is drawn.
+ * @param line_thickness Stroke thickness in pixels.
+ * @param col Stroke color.
+ */
 NK_INTERN void
 nk_xsurf_stroke_rect(XSurface* surf, short x, short y, unsigned short w,
     unsigned short h, unsigned short r, unsigned short line_thickness, struct nk_color col)
@@ -243,6 +318,21 @@ nk_xsurf_stroke_rect(XSurface* surf, short x, short y, unsigned short w,
     XSetLineAttributes(surf->dpy, surf->gc, 1, LineSolid, CapButt, JoinMiter);
 }
 
+/**
+ * Fill a rectangle on the surface, optionally with rounded corners.
+ *
+ * Draws a filled rectangle at (x, y) with size (w, h) using color `col`.
+ * If `r` is zero the rectangle is filled with square corners; otherwise the
+ * rectangle is filled with corners rounded by radius `r` (in pixels).
+ *
+ * @param surf Target drawing surface.
+ * @param x X coordinate of the rectangle's top-left corner.
+ * @param y Y coordinate of the rectangle's top-left corner.
+ * @param w Width of the rectangle in pixels.
+ * @param h Height of the rectangle in pixels.
+ * @param r Corner radius in pixels; when 0 corners are not rounded.
+ * @param col Fill color.
+ */
 NK_INTERN void
 nk_xsurf_fill_rect(XSurface* surf, short x, short y, unsigned short w,
     unsigned short h, unsigned short r, struct nk_color col)
@@ -296,6 +386,21 @@ nk_xsurf_fill_rect(XSurface* surf, short x, short y, unsigned short w,
         (unsigned)r*2, (unsigned)2*r, -90 * 64, 90 * 64);}
 }
 
+/**
+ * Fill a triangle on the given surface using a solid color.
+ *
+ * Draws and fills the triangle defined by the three vertex coordinates in
+ * surface pixel space.
+ *
+ * @param surf Target XSurface to draw into.
+ * @param x0   X coordinate of the first vertex (pixels).
+ * @param y0   Y coordinate of the first vertex (pixels).
+ * @param x1   X coordinate of the second vertex (pixels).
+ * @param y1   Y coordinate of the second vertex (pixels).
+ * @param x2   X coordinate of the third vertex (pixels).
+ * @param y2   Y coordinate of the third vertex (pixels).
+ * @param col  Fill color to use for the triangle.
+ */
 NK_INTERN void
 nk_xsurf_fill_triangle(XSurface *surf, short x0, short y0, short x1,
     short y1, short x2, short y2, struct nk_color col)
@@ -312,6 +417,19 @@ nk_xsurf_fill_triangle(XSurface *surf, short x0, short y0, short x1,
     XFillPolygon(surf->dpy, surf->drawable, surf->gc, pnts, 3, Convex, CoordModeOrigin);
 }
 
+/**
+ * Draws the outline of a triangle on the given XSurface using the specified vertex coordinates, stroke thickness, and color.
+ * 
+ * @param surf Surface to draw onto.
+ * @param x0 X coordinate of the first vertex.
+ * @param y0 Y coordinate of the first vertex.
+ * @param x1 X coordinate of the second vertex.
+ * @param y1 Y coordinate of the second vertex.
+ * @param x2 X coordinate of the third vertex.
+ * @param y2 Y coordinate of the third vertex.
+ * @param line_thickness Stroke thickness in pixels.
+ * @param col Color used for the triangle outline.
+ */
 NK_INTERN void
 nk_xsurf_stroke_triangle(XSurface *surf, short x0, short y0, short x1,
     short y1, short x2, short y2, unsigned short line_thickness, struct nk_color col)
@@ -325,6 +443,13 @@ nk_xsurf_stroke_triangle(XSurface *surf, short x0, short y0, short x1,
     XSetLineAttributes(surf->dpy, surf->gc, 1, LineSolid, CapButt, JoinMiter);
 }
 
+/**
+ * Fill a polygon on the given XSurface using the supplied points and color.
+ * @param surf Target surface to render into.
+ * @param pnts Array of integer 2D points that define the polygon vertices.
+ * @param count Number of points in `pnts`; only the first 128 points will be used.
+ * @param col Fill color to apply to the polygon.
+ */
 NK_INTERN void
 nk_xsurf_fill_polygon(XSurface *surf,  const struct nk_vec2i *pnts, int count,
     struct nk_color col)
@@ -342,6 +467,21 @@ nk_xsurf_fill_polygon(XSurface *surf,  const struct nk_vec2i *pnts, int count,
     #undef MAX_POINTS
 }
 
+/**
+ * Draws a closed, stroked polygon onto the given X surface.
+ *
+ * Connects the sequence of integer 2D points in `pnts` (length `count`) with
+ * straight line segments and closes the shape by connecting the last point to
+ * the first. The stroke uses `line_thickness` and `col` as the color. The
+ * surface's graphics context line attributes are restored to a thickness of 1
+ * after drawing.
+ *
+ * @param surf Target XSurface to draw into.
+ * @param pnts Array of points defining the polygon vertices (must contain at least 1 point).
+ * @param count Number of points in `pnts`.
+ * @param line_thickness Stroke thickness in pixels.
+ * @param col Stroke color.
+ */
 NK_INTERN void
 nk_xsurf_stroke_polygon(XSurface *surf, const struct nk_vec2i *pnts, int count,
     unsigned short line_thickness, struct nk_color col)
@@ -356,6 +496,15 @@ nk_xsurf_stroke_polygon(XSurface *surf, const struct nk_vec2i *pnts, int count,
     XSetLineAttributes(surf->dpy, surf->gc, 1, LineSolid, CapButt, JoinMiter);
 }
 
+/**
+ * Draws a polyline by connecting successive points with the specified thickness and color.
+ * 
+ * @param surf Target XSurface to draw on.
+ * @param pnts Array of points (length at least `count`) defining the polyline vertices.
+ * @param count Number of points in `pnts`.
+ * @param line_thickness Line thickness in pixels.
+ * @param col Color used to draw the polyline.
+ */
 NK_INTERN void
 nk_xsurf_stroke_polyline(XSurface *surf, const struct nk_vec2i *pnts,
     int count, unsigned short line_thickness, struct nk_color col)
@@ -369,6 +518,16 @@ nk_xsurf_stroke_polyline(XSurface *surf, const struct nk_vec2i *pnts,
     XSetLineAttributes(surf->dpy, surf->gc, 1, LineSolid, CapButt, JoinMiter);
 }
 
+/**
+ * Fill an ellipse on the given surface at the specified position and size using the provided color.
+ *
+ * @param surf Target XSurface to draw into.
+ * @param x X coordinate of the top-left corner of the ellipse's bounding rectangle (pixels).
+ * @param y Y coordinate of the top-left corner of the ellipse's bounding rectangle (pixels).
+ * @param w Width of the ellipse's bounding rectangle (pixels).
+ * @param h Height of the ellipse's bounding rectangle (pixels).
+ * @param col Color used to fill the ellipse.
+ */
 NK_INTERN void
 nk_xsurf_fill_circle(XSurface *surf, short x, short y, unsigned short w,
     unsigned short h, struct nk_color col)
@@ -379,6 +538,17 @@ nk_xsurf_fill_circle(XSurface *surf, short x, short y, unsigned short w,
         (unsigned)w, (unsigned)h, 0, 360 * 64);
 }
 
+/**
+ * Draws an outlined ellipse (circle when width equals height) on the given XSurface.
+ *
+ * @param surf Target surface to draw into.
+ * @param x X coordinate of the top-left corner of the ellipse bounding box.
+ * @param y Y coordinate of the top-left corner of the ellipse bounding box.
+ * @param w Width of the ellipse bounding box in pixels.
+ * @param h Height of the ellipse bounding box in pixels.
+ * @param line_thickness Stroke thickness in pixels.
+ * @param col Stroke color.
+ */
 NK_INTERN void
 nk_xsurf_stroke_circle(XSurface *surf, short x, short y, unsigned short w,
     unsigned short h, unsigned short line_thickness, struct nk_color col)
@@ -391,6 +561,18 @@ nk_xsurf_stroke_circle(XSurface *surf, short x, short y, unsigned short w,
     XSetLineAttributes(surf->dpy, surf->gc, 1, LineSolid, CapButt, JoinMiter);
 }
 
+/**
+ * Draws an outlined circular arc on the surface.
+ * 
+ * @param surf Surface to draw onto.
+ * @param cx X coordinate of the arc center.
+ * @param cy Y coordinate of the arc center.
+ * @param radius Radius of the arc in pixels.
+ * @param a_min Start angle in radians.
+ * @param a_max Sweep angle in radians (angular extent to draw).
+ * @param line_thickness Thickness of the arc stroke in pixels.
+ * @param col Color used to draw the arc.
+ */
 NK_INTERN void
 nk_xsurf_stroke_arc(XSurface *surf, short cx, short cy, unsigned short radius,
     float a_min, float a_max, unsigned short line_thickness, struct nk_color col)
@@ -403,6 +585,20 @@ nk_xsurf_stroke_arc(XSurface *surf, short cx, short cy, unsigned short radius,
         (int)(a_min * 180 * 64 / NK_PI), (int)(a_max * 180 * 64 / NK_PI));
 }
 
+/**
+ * Fill an arc (pie slice) on the surface.
+ *
+ * Draws and fills the arc defined by a circle centered at (cx, cy) with the given radius,
+ * starting at angle `a_min` and sweeping by `a_max`, using `col` as the fill color.
+ *
+ * @param surf Target XSurface to draw on.
+ * @param cx X coordinate of the arc center.
+ * @param cy Y coordinate of the arc center.
+ * @param radius Radius of the arc in pixels.
+ * @param a_min Start angle in radians.
+ * @param a_max Sweep (extent) angle in radians (the angle to draw from `a_min`).
+ * @param col Fill color used for the arc.
+ */
 NK_INTERN void
 nk_xsurf_fill_arc(XSurface *surf, short cx, short cy, unsigned short radius,
     float a_min, float a_max, struct nk_color col)
@@ -414,6 +610,22 @@ nk_xsurf_fill_arc(XSurface *surf, short cx, short cy, unsigned short radius,
         (int)(a_min * 180 * 64 / NK_PI), (int)(a_max * 180 * 64 / NK_PI));
 }
 
+/**
+ * Draws a cubic Bezier curve onto the given XSurface by approximating it with line segments.
+ *
+ * The curve is defined by control points p1 (start), p2, p3 and p4 (end). The curve is rendered
+ * as a sequence of straight segments; `num_segments` controls the tessellation density (values
+ * less than 1 are treated as 1). The drawing uses the specified line thickness and color.
+ *
+ * @param surf Target surface to draw on.
+ * @param p1 First control point (start point).
+ * @param p2 Second control point.
+ * @param p3 Third control point.
+ * @param p4 Fourth control point (end point).
+ * @param num_segments Number of straight segments to approximate the curve.
+ * @param line_thickness Line thickness in pixels.
+ * @param col Color used to stroke the curve.
+ */
 NK_INTERN void
 nk_xsurf_stroke_curve(XSurface *surf, struct nk_vec2i p1,
     struct nk_vec2i p2, struct nk_vec2i p3, struct nk_vec2i p4,
@@ -441,6 +653,19 @@ nk_xsurf_stroke_curve(XSurface *surf, struct nk_vec2i p1,
     XSetLineAttributes(surf->dpy, surf->gc, 1, LineSolid, CapButt, JoinMiter);
 }
 
+/**
+ * Draws text onto the given XSurface at the specified position using the provided font and color.
+ *
+ * If `text` is NULL, `font` is NULL, or `len` is zero, the function does nothing.
+ *
+ * @param surf Target surface to draw onto.
+ * @param x Horizontal position (pixels) for the left edge of the text.
+ * @param y Vertical position (pixels) representing the top edge of the text; the function
+ *          advances internally to the font baseline when rendering.
+ * @param text Pointer to the character data to draw.
+ * @param len Number of bytes from `text` to draw.
+ * @param font Font to use for measuring and rendering the text.
+ * @param cfg Color used to render the text. */
 NK_INTERN void
 nk_xsurf_draw_text(XSurface *surf, short x, short y, const char *text, int len,
     XFont *font, struct nk_color cfg)
@@ -475,7 +700,22 @@ nk_xsurf_draw_text(XSurface *surf, short x, short y, const char *text, int len,
 
 
 #ifdef NK_XLIB_INCLUDE_STB_IMAGE
-NK_INTERN struct nk_image
+NK_INTERN struct /**
+ * Create an nk_image from raw image pixels loaded via stb_image and wrap them in an XImageWithAlpha for Xlib rendering.
+ *
+ * Converts input pixel data from RGBA/RGB order to the X11 expected byte order, creates an XImage that takes ownership of
+ * the provided data buffer, and when an alpha channel is present also creates a 1-bit clip mask marking pixels with alpha
+ * greater than 127 as opaque. The returned nk_image's width and height are set to the supplied values.
+ *
+ * @param data Pointer to raw pixel data (RGB or RGBA) as returned by stb_image; may be consumed by the returned image.
+ * @param width Image width in pixels.
+ * @param height Image height in pixels.
+ * @param channels Number of channels per pixel (3 for RGB, 4 for RGBA).
+ * @returns An nk_image that references an internally allocated XImageWithAlpha with its `w` and `h` set; returns `nk_image_id(0)` on allocation or input failure.
+ *
+ * @note The XImage takes ownership of the `data` buffer (it is used directly as the image data). Free the returned image and its resources using nk_xsurf_image_free to avoid leaks.
+ */
+nk_image
 nk_stbi_image_to_xsurf(unsigned char *data, int width, int height, int channels) {
     XSurface *surf = xlib.surf;
     struct nk_image img;
@@ -542,7 +782,14 @@ nk_stbi_image_to_xsurf(unsigned char *data, int width, int height, int channels)
     return img;
 }
 
-NK_API struct nk_image
+NK_API struct /**
+ * Load an image from a memory buffer and convert it into an nk_image suitable for Xlib rendering.
+ *
+ * @param membuf Pointer to the image data in memory (encoded image bytes).
+ * @param membufSize Size of the memory buffer in bytes.
+ * @returns An nk_image representing the loaded image, or an empty/default nk_image if loading fails.
+ */
+nk_image
 nk_xsurf_load_image_from_memory(const void *membuf, nk_uint membufSize)
 {
     int x,y,n;
@@ -551,7 +798,12 @@ nk_xsurf_load_image_from_memory(const void *membuf, nk_uint membufSize)
     return nk_stbi_image_to_xsurf(data, x, y, n);
 }
 
-NK_API struct nk_image
+NK_API struct /**
+ * Load an image file and convert it into an nk_image suitable for rendering.
+ * @param filename Path to the image file to load.
+ * @returns An nk_image containing the loaded image data. If loading fails, the returned nk_image will be empty/invalid. Free resources with nk_xsurf_image_free when the image is no longer needed.
+ */
+nk_image
 nk_xsurf_load_image_from_file(char const *filename)
 {
     int x,y,n;
@@ -559,7 +811,16 @@ nk_xsurf_load_image_from_file(char const *filename)
     data = stbi_load(filename, &x, &y, &n, 0);
     return nk_stbi_image_to_xsurf(data, x, y, n);
 }
-#endif /* NK_XLIB_INCLUDE_STB_IMAGE */
+#endif /**
+ * Draws an NK image onto the specified X surface at the given position and size, using the image's alpha clip mask when available.
+ * @param surf Target XSurface to draw into.
+ * @param x X coordinate (pixels) of the destination origin.
+ * @param y Y coordinate (pixels) of the destination origin.
+ * @param w Width (pixels) of the drawn image.
+ * @param h Height (pixels) of the drawn image.
+ * @param img Nuklear image whose handle should point to an XImageWithAlpha; if `img.handle.ptr` is NULL no drawing occurs.
+ * @param col Tint color (currently ignored).
+ */
 
 NK_INTERN void
 nk_xsurf_draw_image(XSurface *surf, short x, short y, unsigned short w, unsigned short h,
@@ -579,6 +840,13 @@ nk_xsurf_draw_image(XSurface *surf, short x, short y, unsigned short w, unsigned
     }
 }
 
+/**
+ * Free resources held by an nk_image that wrap an XImageWithAlpha.
+ *
+ * Releases the underlying XImage, clip pixmap and its GC, and frees the associated XImageWithAlpha structure.
+ *
+ * @param image Pointer to the nk_image whose native X surface resources should be freed; if `image->handle.ptr` is NULL the function does nothing.
+ */
 void
 nk_xsurf_image_free(struct nk_image* image)
 {
@@ -592,6 +860,12 @@ nk_xsurf_image_free(struct nk_image* image)
 }
 
 
+/**
+ * Clear the entire XSurface by filling its drawable area with a solid pixel color.
+ * 
+ * @param surf Target surface whose drawable area will be cleared.
+ * @param color X11 pixel value used to fill the surface (foreground color for the operation).
+ */
 NK_INTERN void
 nk_xsurf_clear(XSurface *surf, unsigned long color)
 {
@@ -599,12 +873,28 @@ nk_xsurf_clear(XSurface *surf, unsigned long color)
     XFillRectangle(surf->dpy, surf->drawable, surf->gc, 0, 0, surf->w, surf->h);
 }
 
+/**
+ * Blit the surface's drawable to the specified target drawable.
+ * @param target Destination X11 Drawable to receive the blitted pixels.
+ * @param surf Source XSurface containing the pixmap and graphics context.
+ * @param w Width of the region to copy, in pixels (from source origin 0).
+ * @param h Height of the region to copy, in pixels (from source origin 0).
+ */
 NK_INTERN void
 nk_xsurf_blit(Drawable target, XSurface *surf, unsigned int w, unsigned int h)
 {
     XCopyArea(surf->dpy, surf->drawable, target, surf->gc, 0, 0, w, h, 0, 0);
 }
 
+/**
+ * Destroy an XSurface and release all associated X11 resources.
+ *
+ * Frees the XftDraw (when Xft is enabled), the backing pixmap, the graphics
+ * context, and the XSurface structure itself. After this call the provided
+ * surface pointer must not be used.
+ *
+ * @param surf Pointer to the XSurface to destroy; must be a valid, non-NULL surface.
+ */
 NK_INTERN void
 nk_xsurf_del(XSurface *surf)
 {
@@ -616,6 +906,19 @@ nk_xsurf_del(XSurface *surf)
     free(surf);
 }
 
+/**
+ * Create and initialize an XFont structure for the given font name.
+ *
+ * Initializes and returns a newly allocated XFont describing metrics (ascent,
+ * descent, height) for the named font as available on the provided Display.
+ *
+ * @param dpy  X11 display connection used to load the font.
+ * @param name Font name or pattern to load (platform/fontconfig/X11 format).
+ * @returns Pointer to an allocated XFont populated with metric information on success.
+ *          Returns `NULL` if the font could not be loaded and no fallback was available.
+ *          (When built with Xft, an XFont pointer may be returned even if the Xft font
+ *          handle is NULL to indicate the named font was not found.) 
+ */
 NK_API XFont*
 nk_xfont_create(Display *dpy, const char *name)
 {
@@ -663,6 +966,20 @@ nk_xfont_create(Display *dpy, const char *name)
     return font;
 }
 
+/**
+ * Compute the pixel width of a text string using the provided X font.
+ *
+ * Measures the horizontal advance of the first `len` bytes of `text` (UTF-8
+ * on Xft, multibyte or byte text otherwise) using the XFont referenced by
+ * `handle`.
+ *
+ * @param handle nk_handle whose `ptr` points to an XFont used for measurement.
+ * @param height Font height hint (ignored by this implementation).
+ * @param text Pointer to the text to measure.
+ * @param len Number of bytes/chars from `text` to measure.
+ * @return The measured width in pixels as a float; returns `0` if `handle` or
+ * `text` is NULL.
+ */
 NK_INTERN float
 nk_xfont_get_text_width(nk_handle handle, float height, const char *text, int len)
 {
@@ -696,6 +1013,16 @@ nk_xfont_get_text_width(nk_handle handle, float height, const char *text, int le
 #endif
 }
 
+/**
+ * Release all resources associated with an XFont and free its memory.
+ *
+ * Frees the underlying X font resources (XftFont, XFontSet, or XFont depending
+ * on build configuration) using the provided Display, then deallocates the
+ * XFont structure. If `font` is NULL this function is a no-op.
+ *
+ * @param dpy   Display connection used to free font resources.
+ * @param font  XFont instance to destroy; may be NULL.
+ */
 NK_API void
 nk_xfont_del(Display *dpy, XFont *font)
 {
@@ -711,7 +1038,21 @@ nk_xfont_del(Display *dpy, XFont *font)
     free(font);
 }
 
-NK_API struct nk_context*
+NK_API struct /**
+ * Initialize and return a Nuklear context configured for Xlib rendering using the provided font and display parameters.
+ *
+ * @param xfont Pointer to an XFont describing font metrics and handle to use for rendering.
+ * @param dpy   X11 Display connection to use.
+ * @param screen X11 screen number for creating the off-screen surface.
+ * @param root  Root window used for cursor creation and resource association.
+ * @param vis   Visual to use for Xft rendering (required when NK_XLIB_USE_XFT is defined).
+ * @param cmap  Colormap associated with `vis` (required when NK_XLIB_USE_XFT is defined).
+ * @param w     Initial width of the off-screen rendering surface in pixels.
+ * @param h     Initial height of the off-screen rendering surface in pixels.
+ *
+ * @return Pointer to an initialized `nk_context` on success, `NULL` on failure (for example, locale support or X resource creation failures).
+ */
+nk_context*
 nk_xlib_init(XFont *xfont, Display *dpy, int screen, Window root,
 #ifdef NK_XLIB_USE_XFT
     Visual *vis, Colormap cmap,
@@ -751,6 +1092,14 @@ nk_xlib_init(XFont *xfont, Display *dpy, int screen, Window root,
     return &xlib.ctx;
 }
 
+/**
+ * Set the active font for the Nuklear Xlib context.
+ *
+ * Updates the context's font metrics and text-measurement callback so subsequent
+ * rendering and layout use the provided font.
+ *
+ * @param xfont Pointer to the XFont to activate; expected to be a valid, initialized font.
+ */
 NK_API void
 nk_xlib_set_font(XFont *xfont)
 {
@@ -761,6 +1110,11 @@ nk_xlib_set_font(XFont *xfont)
     nk_style_set_font(&xlib.ctx, font);
 }
 
+/**
+ * Pushes the given XFont onto Nuklear's font stack and makes it the active font for styling and text measurement.
+ *
+ * @param xfont Font to push; its metrics and measurement callback will be used for subsequent text layout and rendering until the font is popped.
+ */
 NK_API void
 nk_xlib_push_font(XFont *xfont)
 {
@@ -771,6 +1125,16 @@ nk_xlib_push_font(XFont *xfont)
     nk_style_push_font(&xlib.ctx, font);
 }
 
+/**
+ * Request the X primary selection and deliver its contents into the provided text edit.
+ *
+ * Sets the internal clipboard target to `edit` and initiates an X selection conversion;
+ * the selection data will be delivered to the edit asynchronously via X events.
+ *
+ * @param edit Destination text edit which will receive the pasted text. Must be a
+ *        persistent edit (not a temporary/stack-allocated editor); passing a temporary
+ *        editor is not supported and will trigger an assertion.
+ */
 NK_API void
 nk_xlib_paste(nk_handle handle, struct nk_text_edit* edit)
 {
@@ -782,6 +1146,17 @@ nk_xlib_paste(nk_handle handle, struct nk_text_edit* edit)
     XConvertSelection(xlib.dpy, XA_PRIMARY, XA_STRING, XA_PRIMARY, xlib.root, CurrentTime);
 }
 
+/**
+ * Store a string in the internal clipboard and claim ownership of the X11 selections.
+ *
+ * Copies `len` bytes from `str` into the backend's internal clipboard buffer and sets
+ * the application as owner of both the PRIMARY and CLIPBOARD X selections so the data
+ * can be provided to other X clients on request.
+ *
+ * @param handle Ignored by this backend.
+ * @param str Pointer to the bytes to copy into the clipboard.
+ * @param len Number of bytes from `str` to copy.
+ */
 NK_API void
 nk_xlib_copy(nk_handle handle, const char* str, int len)
 {
@@ -797,6 +1172,20 @@ nk_xlib_copy(nk_handle handle, const char* str, int len)
     }
 }
 
+/**
+ * Process a single X11 event and translate it into Nuklear input/clipboard/window actions.
+ *
+ * This handler updates Nuklear input state (keyboard, mouse, scrolling, double-clicks),
+ * manages clipboard selection requests and responses, handles window resize/expose,
+ * and performs optional pointer grab/ungrab behavior. It also feeds text glyphs
+ * to Nuklear for printable key events.
+ *
+ * @param dpy   X11 display the event was received on.
+ * @param screen Unused; kept for API compatibility.
+ * @param win   Window that received the event (used for selection and resize queries).
+ * @param evt   XEvent to be processed.
+ * @returns `1` if the event was handled by the backend, `0` otherwise.
+ */
 NK_API int
 nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt)
 {
@@ -981,6 +1370,11 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt)
     return 0;
 }
 
+/**
+ * Shut down the NK Xlib integration and release all associated resources.
+ *
+ * Frees the off-screen rendering surface, frees the Nuklear context memory, destroys the created cursor, and clears the internal Xlib backend state.
+ */
 NK_API void
 nk_xlib_shutdown(void)
 {
@@ -990,6 +1384,16 @@ nk_xlib_shutdown(void)
     memset(&xlib, 0, sizeof(xlib));
 }
 
+/**
+ * Render the current Nuklear command buffer to the given X11 drawable.
+ *
+ * Renders all queued Nuklear draw commands to the internal off-screen surface,
+ * clears the surface with the provided color, updates the internal frame timing,
+ * and blits the final image to the specified X11 Drawable.
+ *
+ * @param screen Target X11 Drawable (window or pixmap) to blit the rendered output to.
+ * @param clear  Background color used to clear the off-screen surface before drawing.
+ */
 NK_API void
 nk_xlib_render(Drawable screen, struct nk_color clear)
 {

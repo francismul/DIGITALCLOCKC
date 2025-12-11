@@ -2,6 +2,17 @@
 #include <stdio.h>
 #include "time_utils.h"
 
+/**
+ * Format the current local time into the provided buffer.
+ *
+ * When format_12hr is non-zero the string is formatted as "HH:MM:SS AM/PM";
+ * when format_12hr is zero the string is formatted as "HH:MM:SS" (24-hour).
+ * In 12-hour mode midnight is represented as 12:MM:SS AM.
+ *
+ * @param buffer Destination buffer to receive the null-terminated time string.
+ * @param bufferSize Size of the destination buffer in bytes.
+ * @param format_12hr Non-zero to produce 12-hour time with AM/PM, zero to produce 24-hour time.
+ */
 void get_time_string(char *buffer, int bufferSize, int format_12hr)
 {
     time_t rawtime;
@@ -31,6 +42,12 @@ void get_time_string(char *buffer, int bufferSize, int format_12hr)
     }
 }
 
+/**
+ * Write the current local date into the provided buffer in the format "Day, Month DD, YYYY".
+ *
+ * @param buffer Destination buffer to receive the formatted date string; must be non-NULL.
+ * @param bufferSize Size of the destination buffer in bytes; the written output will be truncated if it does not fit.
+ */
 void get_date_string(char *buffer, int bufferSize)
 {
     time_t rawtime;
