@@ -41,11 +41,17 @@ jobs:
           cp digitalclock README.md LICENSE CHANGELOG.md dist/linux/
           tar -C dist/linux -czf dist/digitalclock-linux-${RELEASE_VERSION}.tar.gz .
 
+      - name: Show dist contents (debug)
+        run: ls -la dist || true
+
+      - name: Check for Linux artifact
+        run: test -f dist/digitalclock-linux-${RELEASE_VERSION}.tar.gz
+
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
           name: linux-package
-          path: dist/digitalclock-linux-${RELEASE_VERSION}.tar.gz
+          path: dist/digitalclock-linux-${{ env.RELEASE_VERSION }}.tar.gz
 
   build-windows:
     runs-on: windows-latest
@@ -76,11 +82,19 @@ jobs:
           zip -j "dist/digitalclock-windows-${RELEASE_VERSION}.zip" \
             digitalclock.exe README.md LICENSE CHANGELOG.md
 
+      - name: Show dist contents (debug)
+        shell: msys2 {0}
+        run: ls -la dist || true
+
+      - name: Check for Windows artifact
+        shell: msys2 {0}
+        run: test -f dist/digitalclock-windows-${RELEASE_VERSION}.zip
+
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-package
-          path: dist/digitalclock-windows-${RELEASE_VERSION}.zip
+          path: dist/digitalclock-windows-${{ env.RELEASE_VERSION }}.zip
 
   release:
     needs:
