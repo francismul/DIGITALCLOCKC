@@ -3,21 +3,6 @@
 #include "../core/config.h"
 #include "../core/plugin_registry.h"
 
-/**
- * Render the digital clock UI window with time display, optional date, settings, plugins, and footer.
- *
- * Displays the current time using the configured 12/24-hour format, optionally shows the date,
- * provides a Settings tree to switch hour format, toggle date visibility, and save the configuration,
- * renders plugin UI via the plugin registry, and draws a footer label. When provided, `big_font`
- * and `footer_font` are applied to the time and footer text respectively.
- *
- * @param ctx Nuklear context used to build and render the UI.
- * @param width Width of the UI window in pixels.
- * @param height Height of the UI window in pixels.
- * @param config Pointer to AppConfig; must contain `time_format` (12 or 24) and `show_date` (non-zero to show date).
- * @param big_font Optional font to use for the main time display; pass NULL to use the default font.
- * @param footer_font Optional font to use for the footer text; pass NULL to use the default font.
- */
 void draw_clock_ui(struct nk_context *ctx, int width, int height, AppConfig* config, const struct nk_user_font *big_font, const struct nk_user_font *footer_font) {
     if (nk_begin(ctx, "Digital Clock", nk_rect(0, 0, width, height),
         NK_WINDOW_BACKGROUND)) {

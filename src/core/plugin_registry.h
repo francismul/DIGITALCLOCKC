@@ -1,7 +1,10 @@
 #ifndef PLUGIN_REGISTRY_H
 #define PLUGIN_REGISTRY_H
 
-#include "../../vendor/nuklear.h"
+#include <stddef.h>
+
+/* Forward declare nk_context to avoid including nuklear.h */
+struct nk_context;
 
 typedef struct {
     const char* name;
