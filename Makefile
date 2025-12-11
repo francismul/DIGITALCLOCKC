@@ -25,11 +25,13 @@ ifeq ($(UNAME), Linux)
 	LDFLAGS += -lX11
 endif
 
-# If cross-compiling or on Windows (often OS is set)
-ifdef OS
-	ifneq ($(findstring Windows,$(OS)),)
-		LDFLAGS = -lgdi32 -luser32 -lkernel32 -lm
-	endif
+# Handle Windows environments (GitHub Actions/MSYS/etc.)
+ifneq (,$(findstring MINGW,$(UNAME)))
+	LDFLAGS = -lgdi32 -luser32 -lkernel32 -lmsimg32 -lm
+endif
+
+ifeq ($(OS),Windows_NT)
+	LDFLAGS = -lgdi32 -luser32 -lkernel32 -lmsimg32 -lm
 endif
 
 .PHONY: all clean
