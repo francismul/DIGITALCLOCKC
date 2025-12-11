@@ -14,12 +14,12 @@ The application is now structured into distinct layers:
 
 ```mermaid
 graph TD
-    Main[Main Entry] --> Platform[Platform Layer]
-    Main --> UI[UI Layer (Nuklear)]
-    UI --> Core[Core Logic]
-    UI --> Plugins[Plugin Registry]
-    Core --> Config[Config System]
-    Core --> Time[Time Utils]
+    A["Main Entry"] --> B["Platform Layer"]
+    A --> C["UI Layer (Nuklear)"]
+    C --> D["Core Logic"]
+    C --> E["Plugin Registry"]
+    D --> F["Config System"]
+    D --> G["Time Utils"]
 ```
 
 - **Core**: Handles time verification, configuration parsing (via `inih`), and business logic.
