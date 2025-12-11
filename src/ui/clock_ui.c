@@ -1,3 +1,4 @@
+#include "../nuklear_config.h"
 #include "../../vendor/nuklear.h"
 #include "../core/time_utils.h"
 #include "../core/config.h"

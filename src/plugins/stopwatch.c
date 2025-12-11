@@ -1,5 +1,6 @@
-#include "../core/plugin_registry.h"
+#include "../nuklear_config.h"
 #include "../../vendor/nuklear.h"
+#include "../core/plugin_registry.h"
 #include <stdio.h>
 #include <time.h>
 
