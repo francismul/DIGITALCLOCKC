@@ -68,7 +68,9 @@ jobs:
         run: |
           make clean
           make
-          mv digitalclock digitalclock.exe
+          if [ ! -f digitalclock.exe ] && [ -f digitalclock ]; then
+            mv digitalclock digitalclock.exe
+          fi
 
       - name: Smoke-test GUI launch
         shell: pwsh

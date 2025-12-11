@@ -65,7 +65,9 @@ jobs:
         run: |
           make clean
           make
-          mv digitalclock digitalclock.exe
+          if [ ! -f digitalclock.exe ] && [ -f digitalclock ]; then
+            mv digitalclock digitalclock.exe
+          fi
 
       - name: Package Windows artifact
         shell: msys2 {0}
