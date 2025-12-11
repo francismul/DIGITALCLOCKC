@@ -11,6 +11,15 @@ HFONT hFontTime = NULL; // global font handles
 HFONT hFontDate = NULL;
 
 // Function to format current time as a string
+/**
+ * @brief Get the current time as a formatted string.
+ * 
+ * Formats the current system time into a string buffer.
+ * 
+ * @param buffer Buffer to store the formatted time string
+ * @param bufferSize Size of the buffer
+ * @param format Time format: 12 for 12-hour, 24 for 24-hour
+ */
 void GetTimeString(char *buffer, int bufferSize, int format)
 {
     time_t rawtime;
@@ -41,6 +50,14 @@ void GetTimeString(char *buffer, int bufferSize, int format)
 }
 
 // Function to format current date as a string
+/**
+ * @brief Get the current date as a formatted string.
+ * 
+ * Formats the current system date into a string buffer.
+ * 
+ * @param buffer Buffer to store the formatted date string
+ * @param bufferSize Size of the buffer
+ */
 void GetDateString(char *buffer, int bufferSize)
 {
     time_t rawtime;

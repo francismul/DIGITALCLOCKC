@@ -13,7 +13,13 @@
 #define CLEAR "clear" // Command to clear the screen in Linux/Unix
 #endif
 
-// Function to print the current time
+/**
+ * @brief Print the current time to the console.
+ * 
+ * Formats and displays the current time in 12 or 24 hour format.
+ * 
+ * @param format Time format: 12 for 12-hour, 24 for 24-hour
+ */
 void printTime(int format)
 {
     time_t rawtime;
@@ -46,6 +52,11 @@ void printTime(int format)
 }
 
 // Function to clear the screen
+/**
+ * @brief Clear the terminal screen.
+ * 
+ * Uses system command to clear the console display.
+ */
 void clearScreen()
 {
     system(CLEAR);
@@ -53,6 +64,13 @@ void clearScreen()
 
 // Cross-platform sleep function
 // in windows sleep takes in milliseconds while linux sleep takes in seconds
+/**
+ * @brief Sleep for a specified number of seconds.
+ * 
+ * Cross-platform sleep function that works on both Windows and Linux.
+ * 
+ * @param seconds Number of seconds to sleep
+ */
 void performSleep(int seconds)
 {
 #ifdef _WIN32
@@ -63,6 +81,13 @@ void performSleep(int seconds)
 }
 
 // Prompting user on what clock format he/she prefers (12hr, 24hr)
+/**
+ * @brief Get the user's preferred time format.
+ * 
+ * Prompts the user to choose between 12-hour and 24-hour time format.
+ * 
+ * @return 12 for 12-hour format, 24 for 24-hour format
+ */
 int getTimeFormat()
 {
     int format = 0;
@@ -79,6 +104,13 @@ int getTimeFormat()
 }
 
 // Main function
+/**
+ * @brief Main entry point for the terminal clock application.
+ * 
+ * Runs an infinite loop displaying the current time.
+ * 
+ * @return Exit status (never reached)
+ */
 int main()
 {
     int format = getTimeFormat(); // Getting user preferred time format
