@@ -12,6 +12,13 @@
     #include <sys/time.h>
 #endif
 
+/**
+ * @brief Sleep for a specified number of milliseconds.
+ * 
+ * Cross-platform sleep function.
+ * 
+ * @param ms Milliseconds to sleep
+ */
 void platform_sleep_ms(int ms) {
     if (ms < 0) ms = 0;
 #ifdef _WIN32
@@ -24,6 +31,11 @@ void platform_sleep_ms(int ms) {
 #endif
 }
 
+/**
+ * @brief Sleep until the start of the next second.
+ * 
+ * Aligns updates to second boundaries for precise timing.
+ */
 void platform_sleep_until_next_second(void) {
 #ifdef _WIN32
     SYSTEMTIME st;
@@ -44,6 +56,14 @@ void platform_sleep_until_next_second(void) {
 #endif
 }
 
+/**
+ * @brief Get the path to the configuration file.
+ * 
+ * Returns the full path to the user's config file.
+ * 
+ * @param buffer Buffer to store the path
+ * @param size Size of the buffer
+ */
 void platform_get_config_path(char *buffer, int size) {
 #ifdef _WIN32
     // On Windows, maybe use APPDATA or just local user profile

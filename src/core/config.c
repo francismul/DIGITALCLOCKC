@@ -6,6 +6,17 @@
 
 #define CONFIG_FILENAME ".digitalclockc.conf"
 
+/**
+ * @brief INI parser handler for configuration file.
+ * 
+ * Parses individual key-value pairs from the config file.
+ * 
+ * @param user User data pointer (AppConfig*)
+ * @param section INI section name
+ * @param name Key name
+ * @param value Key value
+ * @return 1 on success, 0 on unknown key
+ */
 static int handler(void* user, const char* section, const char* name, const char* value)
 {
     AppConfig* config = (AppConfig*)user;
@@ -24,6 +35,14 @@ static int handler(void* user, const char* section, const char* name, const char
 
 #include "../platform/platform.h"
 
+/**
+ * @brief Load configuration from the user's config file.
+ * 
+ * Loads settings from ~/.digitalclockc.conf. If the file is missing or invalid,
+ * default values are used.
+ * 
+ * @param config Pointer to AppConfig structure to fill with loaded values
+ */
 void load_config(AppConfig* config)
 {
     // Defaults
@@ -39,6 +58,13 @@ void load_config(AppConfig* config)
     }
 }
 
+/**
+ * @brief Save configuration to the user's config file.
+ * 
+ * Saves the current configuration to ~/.digitalclockc.conf.
+ * 
+ * @param config Pointer to AppConfig structure containing values to save
+ */
 void save_config(const AppConfig* config)
 {
     char path[1024];

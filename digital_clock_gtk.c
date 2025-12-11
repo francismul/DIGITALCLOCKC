@@ -12,6 +12,15 @@ int showDate = 1;    // 1 to show date, 0 to hide
 guint timer_id;
 
 // Function to format current time as a string
+/**
+ * @brief Get the current time as a formatted string.
+ * 
+ * Formats the current system time into a string buffer.
+ * 
+ * @param buffer Buffer to store the formatted time string
+ * @param bufferSize Size of the buffer
+ * @param format Time format: 12 for 12-hour, 24 for 24-hour
+ */
 void get_time_string(char *buffer, int bufferSize, int format)
 {
     time_t rawtime;
@@ -42,6 +51,14 @@ void get_time_string(char *buffer, int bufferSize, int format)
 }
 
 // Function to format current date as a string
+/**
+ * @brief Get the current date as a formatted string.
+ * 
+ * Formats the current system date into a string buffer.
+ * 
+ * @param buffer Buffer to store the formatted date string
+ * @param bufferSize Size of the buffer
+ */
 void get_date_string(char *buffer, int bufferSize)
 {
     time_t rawtime;
@@ -62,6 +79,14 @@ void get_date_string(char *buffer, int bufferSize)
 }
 
 // Timer callback function to update the display
+/**
+ * @brief Update the time and date display.
+ * 
+ * Timer callback that refreshes the GUI with current time and date.
+ * 
+ * @param data User data (unused)
+ * @return TRUE to continue the timer
+ */
 gboolean update_time(gpointer data)
 {
     char timeStr[64];
@@ -95,6 +120,16 @@ gboolean update_time(gpointer data)
 }
 
 // Key press event handler
+/**
+ * @brief Handle key press events.
+ * 
+ * Processes keyboard shortcuts for toggling time format and date display.
+ * 
+ * @param widget The widget that received the event
+ * @param event The key press event
+ * @param data User data (unused)
+ * @return FALSE to allow further processing
+ */
 gboolean on_key_press(GtkWidget *widget, GdkEventKey *event, gpointer data)
 {
     switch (event->keyval)
@@ -125,6 +160,16 @@ gboolean on_key_press(GtkWidget *widget, GdkEventKey *event, gpointer data)
 }
 
 // Window close event handler
+/**
+ * @brief Handle window close events.
+ * 
+ * Cleans up resources when the window is closed.
+ * 
+ * @param widget The widget that received the event
+ * @param event The event
+ * @param data User data (unused)
+ * @return FALSE to allow the window to close
+ */
 gboolean on_window_delete(GtkWidget *widget, GdkEvent *event, gpointer data)
 {
     if (timer_id > 0)
@@ -136,6 +181,11 @@ gboolean on_window_delete(GtkWidget *widget, GdkEvent *event, gpointer data)
 }
 
 // Setup CSS styling
+/**
+ * @brief Set up CSS styling for the application.
+ * 
+ * Applies custom CSS to style the GTK widgets.
+ */
 void setup_styling()
 {
     GtkCssProvider *provider = gtk_css_provider_new();
@@ -157,6 +207,14 @@ void setup_styling()
 }
 
 // Menu callback functions
+/**
+ * @brief Toggle time format callback.
+ * 
+ * Switches between 12-hour and 24-hour time display.
+ * 
+ * @param menuitem The menu item that was activated
+ * @param user_data User data (unused)
+ */
 void toggle_time_format_callback(GtkMenuItem *menuitem, gpointer user_data)
 {
     timeFormat = (timeFormat == 24) ? 12 : 24;
@@ -170,6 +228,11 @@ void toggle_date_display_callback(GtkMenuItem *menuitem, gpointer user_data)
 }
 
 // Create about dialog
+/**
+ * @brief Show the about dialog.
+ * 
+ * Displays information about the application.
+ */
 void show_about_dialog()
 {
     GtkWidget *about_dialog = gtk_about_dialog_new();
@@ -189,6 +252,14 @@ void show_about_dialog()
 }
 
 // Right-click context menu
+/**
+ * @brief Show the context menu on right-click.
+ * 
+ * Creates and displays a context menu with application options.
+ * 
+ * @param widget The widget that was clicked
+ * @param event The button press event
+ */
 void show_context_menu(GtkWidget *widget, GdkEventButton *event)
 {
     if (event->button == GDK_BUTTON_SECONDARY) // Right click
@@ -241,12 +312,31 @@ void show_context_menu(GtkWidget *widget, GdkEventButton *event)
 }
 
 // Button press event handler for context menu
+/**
+ * @brief Handle button press events for context menu.
+ * 
+ * Shows the context menu on right-click.
+ * 
+ * @param widget The widget that received the event
+ * @param event The button press event
+ * @param data User data (unused)
+ * @return FALSE to allow further processing
+ */
 gboolean on_button_press(GtkWidget *widget, GdkEventButton *event, gpointer data)
 {
     show_context_menu(widget, event);
     return FALSE;
 }
 
+/**
+ * @brief Main entry point for the GTK clock application.
+ * 
+ * Initializes GTK, creates the window, and runs the main loop.
+ * 
+ * @param argc Number of command line arguments
+ * @param argv Command line arguments
+ * @return Exit status
+ */
 int main(int argc, char *argv[])
 {
     // Initialize GTK

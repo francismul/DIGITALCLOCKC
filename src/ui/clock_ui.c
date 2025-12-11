@@ -4,6 +4,18 @@
 #include "../core/config.h"
 #include "../core/plugin_registry.h"
 
+/**
+ * @brief Draw the main clock user interface.
+ * 
+ * Renders the digital clock UI using Nuklear GUI library.
+ * 
+ * @param ctx Nuklear context for rendering
+ * @param width Window width
+ * @param height Window height
+ * @param config Application configuration
+ * @param big_font Font for time display
+ * @param footer_font Font for footer text
+ */
 void draw_clock_ui(struct nk_context *ctx, int width, int height, AppConfig* config, const struct nk_user_font *big_font, const struct nk_user_font *footer_font) {
     if (nk_begin(ctx, "Digital Clock", nk_rect(0, 0, width, height),
         NK_WINDOW_BACKGROUND)) {

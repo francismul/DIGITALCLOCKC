@@ -9,11 +9,21 @@ static int running = 0;
 static time_t start_time;
 static double elapsed = 0.0;
 
+/**
+ * @brief Initialize the stopwatch plugin.
+ * 
+ * Resets the stopwatch state.
+ */
 static void stopwatch_init(void) {
     running = 0;
     elapsed = 0.0;
 }
 
+/**
+ * @brief Update the stopwatch plugin.
+ * 
+ * Updates the elapsed time if the stopwatch is running.
+ */
 static void stopwatch_update(void) {
     if (running) {
         time_t now;
@@ -22,6 +32,13 @@ static void stopwatch_update(void) {
     }
 }
 
+/**
+ * @brief Draw the stopwatch UI.
+ * 
+ * Renders the stopwatch controls and display.
+ * 
+ * @param ctx Nuklear context for rendering
+ */
 static void stopwatch_draw(struct nk_context* ctx) {
     if (nk_tree_push(ctx, NK_TREE_TAB, "Stopwatch", NK_MINIMIZED)) {
         nk_layout_row_dynamic(ctx, 30, 1);
@@ -50,6 +67,9 @@ static void stopwatch_draw(struct nk_context* ctx) {
     }
 }
 
+/**
+ * @brief Stopwatch plugin instance.
+ */
 Plugin stopwatch_plugin = {
     .name = "Stopwatch",
     .init = stopwatch_init,

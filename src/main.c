@@ -15,6 +15,11 @@
     #define FILENO fileno
 #endif
 
+/**
+ * @brief Print a dragon banner to the console.
+ * 
+ * Displays an ASCII art dragon banner if running in a terminal.
+ */
 static void print_dragon_banner(void) {
     static const char *art[] = {
         "                           ______________",
@@ -58,6 +63,11 @@ static void print_dragon_banner(void) {
 #define WINDOW_WIDTH 400
 #define WINDOW_HEIGHT 200
 
+/**
+ * @brief Print the dragon banner once if running in a terminal.
+ * 
+ * Ensures the banner is only printed once per session.
+ */
 static void maybe_print_dragon(void) {
     static int printed = 0;
     if (printed) return;
@@ -72,6 +82,17 @@ static void maybe_print_dragon(void) {
     #include <windows.h>
     #include "../vendor/nuklear_gdi.h"
 
+    /**
+     * @brief Windows window procedure callback.
+     * 
+     * Handles Windows messages for the application window.
+     * 
+     * @param wnd Window handle
+     * @param msg Message identifier
+     * @param wparam Message parameter
+     * @param lparam Message parameter
+     * @return Message result
+     */
     LRESULT CALLBACK WindowProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam) {
         switch (msg) {
         case WM_DESTROY:
@@ -83,6 +104,13 @@ static void maybe_print_dragon(void) {
         return DefWindowProc(wnd, msg, wparam, lparam);
     }
 
+    /**
+     * @brief Main entry point for Windows version.
+     * 
+     * Initializes the application, sets up the GUI, and runs the main loop.
+     * 
+     * @return Exit status
+     */
     int main(void) {
         GdiFont* font;
         GdiFont* big_font;
@@ -173,6 +201,13 @@ static void maybe_print_dragon(void) {
     #include <X11/Xos.h>
     #include "../vendor/nuklear_xlib.h"
 
+    /**
+     * @brief Main entry point for Linux/X11 version.
+     * 
+     * Initializes the application, sets up the GUI, and runs the main loop.
+     * 
+     * @return Exit status
+     */
     int main(void) {
         Display *dpy;
         Window win;
