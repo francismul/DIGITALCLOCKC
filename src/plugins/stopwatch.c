@@ -7,11 +7,20 @@ static int running = 0;
 static time_t start_time;
 static double elapsed = 0.0;
 
+/**
+ * Initialize the stopwatch state to stopped and zero elapsed time.
+ */
 static void stopwatch_init(void) {
     running = 0;
     elapsed = 0.0;
 }
 
+/**
+ * Update stopwatch elapsed time when running.
+ *
+ * When the stopwatch is active, sets the module's `elapsed` value to the
+ * difference between the current system time and the stored `start_time`.
+ */
 static void stopwatch_update(void) {
     if (running) {
         time_t now;
@@ -20,6 +29,16 @@ static void stopwatch_update(void) {
     }
 }
 
+/**
+ * Render the stopwatch UI and handle user interactions.
+ *
+ * Displays the elapsed time formatted as HH:MM:SS and provides controls to start/stop and reset
+ * the stopwatch. Pressing Start captures the current time and resumes timing (preserving prior
+ * elapsed time); pressing Stop pauses the stopwatch; pressing Reset stops timing and clears
+ * the elapsed time.
+ *
+ * @param ctx Nuklear UI context used to build and render the stopwatch widgets.
+ */
 static void stopwatch_draw(struct nk_context* ctx) {
     if (nk_tree_push(ctx, NK_TREE_TAB, "Stopwatch", NK_MINIMIZED)) {
         nk_layout_row_dynamic(ctx, 30, 1);

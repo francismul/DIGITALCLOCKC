@@ -44,8 +44,13 @@ typedef struct {
     size_t num_left;
 } ini_parse_string_ctx;
 
-/* Strip whitespace chars off end of given string, in place. end must be a
-   pointer to the NUL terminator at the end of the string. Return s. */
+/**
+ * Remove trailing whitespace from a string in place.
+ *
+ * @param s Pointer to the start of the string to trim.
+ * @param end Pointer to the terminating NUL character at the end of the string.
+ * @returns The pointer `s`.
+ */
 static char* ini_rstrip(char* s, char* end)
 {
     while (end > s && isspace((unsigned char)(*--end)))
@@ -53,7 +58,13 @@ static char* ini_rstrip(char* s, char* end)
     return s;
 }
 
-/* Return pointer to first non-whitespace char in given string. */
+/**
+ * Finds the first non-whitespace character in a NUL-terminated string.
+ * @param s NUL-terminated string to scan.
+ * @return Pointer into `s` at the first character that is not whitespace,
+ *         or a pointer to the terminating NUL if the string contains only
+ *         whitespace or is empty.
+ */
 static char* ini_lskip(const char* s)
 {
     while (*s && isspace((unsigned char)(*s)))
@@ -61,9 +72,20 @@ static char* ini_lskip(const char* s)
     return (char*)s;
 }
 
-/* Return pointer to first char (of chars) or inline comment in given string,
-   or pointer to NUL at end of string if neither found. Inline comment must
-   be prefixed by a whitespace character to register as a comment. */
+/**
+ * Locate the first occurrence of any specified character or the start of an inline comment in a string.
+ *
+ * Scans `s` from the beginning and stops at the first character that is contained in `chars` (if `chars`
+ * is non-NULL) or at the start of an inline comment. When inline comments are enabled at compile time,
+ * an inline comment is recognized only if one of the inline comment prefix characters appears immediately
+ * after a whitespace character. If neither a match nor an inline comment is found, the terminating NUL
+ * is returned.
+ *
+ * @param s Null-terminated string to scan.
+ * @param chars Null-terminated string of characters to search for; if NULL, only inline comments are considered.
+ * @returns Pointer into `s` at the first matching character, at the first inline comment prefix (when applicable),
+ *          or at the terminating NUL if no match is found.
+ */
 static char* ini_find_chars_or_comment(const char* s, const char* chars)
 {
 #if INI_ALLOW_INLINE_COMMENTS
@@ -81,8 +103,16 @@ static char* ini_find_chars_or_comment(const char* s, const char* chars)
     return (char*)s;
 }
 
-/* Similar to strncpy, but ensures dest (size bytes) is
-   NUL-terminated, and doesn't pad with NULs. */
+/**
+ * Copy up to size-1 characters from src into dest and ensure dest is NUL-terminated.
+ *
+ * Does not pad the remainder of dest with NULs when src is shorter than size-1.
+ *
+ * @param dest Destination buffer with space for at least `size` bytes.
+ * @param src  Source NUL-terminated string to copy from.
+ * @param size Size of the destination buffer in bytes.
+ * @returns Pointer to dest.
+ */
 static char* ini_strncpy0(char* dest, const char* src, size_t size)
 {
     /* Could use strncpy internally, but it causes gcc warnings (see issue #91) */
@@ -93,7 +123,27 @@ static char* ini_strncpy0(char* dest, const char* src, size_t size)
     return dest;
 }
 
-/* See documentation in header file. */
+/**
+     * Parse INI data from a generic input stream and invoke a handler for each
+     * parsed section, name, and value.
+     *
+     * @param reader Function that reads a line into a buffer: it is called as
+     *               reader(char *buffer, int size, void *stream) and must return
+     *               the buffer on success or NULL on end-of-file/error.
+     * @param stream Opaque pointer passed to `reader` to identify the input source.
+     * @param handler Callback invoked for each parsed element. It is called with
+     *                the form handler(user, section, name, value) (and with an
+     *                extra lineno argument if compiled with INI_HANDLER_LINENO).
+     *                `section` is the current section name (empty string for the
+     *                global section), `name` is the option name (NULL for a
+     *                section-only callback), and `value` is the option value
+     *                (NULL when no value is present).
+     * @param user    Opaque pointer passed through to `handler`.
+     *
+     * @returns `0` if parsing completed without errors; a positive integer giving
+     *          the 1-based line number of the first parse or handler error; `-2`
+     *          if a memory allocation failed.
+     */
 int ini_parse_stream(ini_reader reader, void* stream, ini_handler handler,
                      void* user)
 {
@@ -264,13 +314,31 @@ int ini_parse_stream(ini_reader reader, void* stream, ini_handler handler,
     return error;
 }
 
-/* See documentation in header file. */
+/**
+ * Parse INI data from an open FILE stream.
+ *
+ * Invokes the INI parser on the provided FILE, calling the supplied handler for
+ * each parsed section/name/value triplet.
+ *
+ * @param file Open FILE pointer to read INI data from.
+ * @param handler Callback invoked for each parsed section/name/value.
+ * @param user User pointer passed through to the handler.
+ * @returns The 1-based line number where a parse error occurred, or 0 if parsing completed without errors.
+ */
 int ini_parse_file(FILE* file, ini_handler handler, void* user)
 {
     return ini_parse_stream((ini_reader)fgets, file, handler, user);
 }
 
-/* See documentation in header file. */
+/**
+ * Parse an INI file from disk and invoke `handler` for each parsed section, name, and value.
+ *
+ * @param filename Path to the INI file to parse.
+ * @param handler Callback invoked for each parsed (section, name, value) tuple.
+ * @param user User-supplied pointer forwarded to `handler`.
+ * @returns Line number where a parse error occurred, `0` if parsing completed without errors,
+ *          or `-1` if the file could not be opened.
+ */
 int ini_parse(const char* filename, ini_handler handler, void* user)
 {
     FILE* file;
@@ -284,8 +352,14 @@ int ini_parse(const char* filename, ini_handler handler, void* user)
     return error;
 }
 
-/* An ini_reader function to read the next line from a string buffer. This
-   is the fgets() equivalent used by ini_parse_string(). */
+/**
+ * Read the next line from an in-memory string buffer into the provided buffer.
+ *
+ * @param str Destination buffer to receive the line; always NUL-terminated on success.
+ * @param num Maximum number of bytes to write to `str`, including the terminating NUL.
+ * @param stream Pointer to an `ini_parse_string_ctx` that tracks the current read position and remaining length.
+ * @returns `str` containing the line (ending with `\n` if one was read) on success, `NULL` if there is no data left to read or if `num` is less than 2.
+ */
 static char* ini_reader_string(char* str, int num, void* stream) {
     ini_parse_string_ctx* ctx = (ini_parse_string_ctx*)stream;
     const char* ctx_ptr = ctx->ptr;
@@ -311,12 +385,27 @@ static char* ini_reader_string(char* str, int num, void* stream) {
     return str;
 }
 
-/* See documentation in header file. */
+/**
+ * Parse INI data from a null-terminated C string and invoke the handler for each parsed section, name, and value.
+ *
+ * @param string Null-terminated string containing INI-formatted data to parse.
+ * @param handler Callback invoked for each parsed section/name/value; receives the user pointer as provided.
+ * @param user Opaque pointer passed through to the handler.
+ * @returns The 1-based line number where a parse or handler error occurred, or `0` if parsing completed successfully.
+ */
 int ini_parse_string(const char* string, ini_handler handler, void* user) {
     return ini_parse_string_length(string, strlen(string), handler, user);
 }
 
-/* See documentation in header file. */
+/**
+ * Parse INI data from a memory buffer and invoke the handler for each parsed section, name, and value.
+ *
+ * @param string Pointer to the buffer containing INI-formatted data (buffer need not be NUL-terminated).
+ * @param length Number of bytes from `string` to parse.
+ * @param handler Callback invoked for each parsed element (section, name/value); receives `user` as its context.
+ * @param user User-provided pointer forwarded to `handler`.
+ * @returns `0` on success, or the 1-based line number where a parse error occurred.
+ */
 int ini_parse_string_length(const char* string, size_t length,
                             ini_handler handler, void* user) {
     ini_parse_string_ctx ctx;

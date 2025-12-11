@@ -59,6 +59,18 @@ static struct {
     struct nk_context ctx;
 } gdi;
 
+/**
+ * Create a Windows DIB-backed nk_image from an RGB24 frame buffer and store it in `image`.
+ *
+ * Converts a tightly packed 24-bit RGB buffer (row-major, 3 bytes per pixel) into a DIB
+ * bitmap, sets image width/height and region, and stores the HBITMAP in image->handle.ptr.
+ * If any input is invalid (null pointers or non-positive dimensions), the function does nothing.
+ *
+ * @param image Pointer to the nk_image to initialize; its fields (w, h, region, handle) are updated.
+ * @param frame_buffer Pointer to a contiguous RGB24 pixel buffer (width * height * 3 bytes).
+ * @param width Width of the image in pixels; must be greater than 0.
+ * @param height Height of the image in pixels; must be greater than 0.
+ */
 static void
 nk_create_image(struct nk_image * image, const char * frame_buffer, const int width, const int height)
 {
@@ -105,6 +117,10 @@ nk_create_image(struct nk_image * image, const char * frame_buffer, const int wi
     }
 }
 
+/**
+ * Frees the Windows bitmap associated with an nk_image and resets the image structure to zero.
+ * @param image Pointer to the nk_image whose underlying HBITMAP will be deleted and which will be cleared; if NULL or the image has no handle, nothing is done.
+ */
 static void
 nk_delete_image(struct nk_image * image)
 {
@@ -116,6 +132,18 @@ nk_delete_image(struct nk_image * image)
     }
 }
 
+/**
+ * Draws an nk_image into the backend's offscreen bitmap at the given position and size.
+ *
+ * @param x X coordinate (left) in the offscreen bitmap where the image will be placed.
+ * @param y Y coordinate (top) in the offscreen bitmap where the image will be placed.
+ * @param w Width to draw the image (stretched or shrunk to this size).
+ * @param h Height to draw the image (stretched or shrunk to this size).
+ * @param img nk_image whose handle is expected to be a Windows HBITMAP; the bitmap pixels are blitted into the offscreen DC.
+ * @param col Color tint to apply to the image (currently ignored by this backend).
+ *
+ * If the backend has no offscreen memory DC or the image has no valid bitmap handle, the call has no effect.
+ */
 static void
 nk_gdi_draw_image(short x, short y, unsigned short w, unsigned short h,
     struct nk_image img, struct nk_color col)
@@ -134,12 +162,29 @@ nk_gdi_draw_image(short x, short y, unsigned short w, unsigned short h,
     DeleteDC(hDCBits);
 }
 
+/**
+ * Map an nk_color's RGB components into a Windows COLORREF value.
+ * @param c nk_color whose RGB components will be used (alpha is ignored).
+ * @returns COLORREF with red in the least-significant byte, green in the next byte, and blue in the next byte; the alpha component is discarded.
+ */
 static COLORREF
 convert_color(struct nk_color c)
 {
     return c.r | (c.g << 8) | (c.b << 16);
 }
 
+/**
+ * Set the current GDI clipping region to the rectangle defined by (x, y, w, h).
+ *
+ * Resets any existing clip region and intersects the device context's clip with
+ * the rectangle (x, y) — (x + w, y + h). The right and bottom edges use an
+ * inclusive extent to cover pixel extents.
+ *
+ * @param x Left coordinate of the clipping rectangle in pixels.
+ * @param y Top coordinate of the clipping rectangle in pixels.
+ * @param w Width of the clipping rectangle in pixels.
+ * @param h Height of the clipping rectangle in pixels.
+ */
 static void
 nk_gdi_scissor(HDC dc, float x, float y, float w, float h)
 {
@@ -147,6 +192,17 @@ nk_gdi_scissor(HDC dc, float x, float y, float w, float h)
     IntersectClipRect(dc, (int)x, (int)y, (int)(x + w + 1), (int)(y + h + 1));
 }
 
+/**
+ * Draws a straight line between two points into the specified device context using the given color and thickness.
+ *
+ * @param dc Device context to draw into.
+ * @param x0 X coordinate of the start point.
+ * @param y0 Y coordinate of the start point.
+ * @param x1 X coordinate of the end point.
+ * @param y1 Y coordinate of the end point.
+ * @param line_thickness Thickness of the line in pixels; a value of 1 uses the DC pen.
+ * @param col Color to use for the line.
+ */
 static void
 nk_gdi_stroke_line(HDC dc, short x0, short y0, short x1,
     short y1, unsigned int line_thickness, struct nk_color col)
@@ -170,6 +226,17 @@ nk_gdi_stroke_line(HDC dc, short x0, short y0, short x1,
     }
 }
 
+/**
+ * Draws an outlined rectangle onto the given device context, using rounded corners when a corner radius is provided.
+ * @param dc Target device context to draw into.
+ * @param x X coordinate of the rectangle's top-left corner.
+ * @param y Y coordinate of the rectangle's top-left corner.
+ * @param w Width of the rectangle in pixels.
+ * @param h Height of the rectangle in pixels.
+ * @param r Corner radius in pixels; use 0 for sharp corners.
+ * @param line_thickness Outline thickness in pixels; a value of 1 uses the DC pen optimization.
+ * @param col Outline color.
+ */
 static void
 nk_gdi_stroke_rect(HDC dc, short x, short y, unsigned short w,
     unsigned short h, unsigned short r, unsigned short line_thickness, struct nk_color col)
@@ -199,6 +266,20 @@ nk_gdi_stroke_rect(HDC dc, short x, short y, unsigned short w,
     }
 }
 
+/**
+ * Fill a rectangle on the given device context with a solid color.
+ *
+ * If `r` is zero the rectangle is filled with square corners; otherwise the
+ * rectangle is filled with rounded corners using `r` as the corner radius.
+ *
+ * @param dc Handle to the device context to draw into.
+ * @param x Left coordinate of the rectangle.
+ * @param y Top coordinate of the rectangle.
+ * @param w Width of the rectangle in pixels.
+ * @param h Height of the rectangle in pixels.
+ * @param r Corner radius in pixels; set to 0 for square corners.
+ * @param col Color used to fill the rectangle.
+ */
 static void
 nk_gdi_fill_rect(HDC dc, short x, short y, unsigned short w,
     unsigned short h, unsigned short r, struct nk_color col)
@@ -216,6 +297,14 @@ nk_gdi_fill_rect(HDC dc, short x, short y, unsigned short w,
         RoundRect(dc, x, y, x + w, y + h, r, r);
     }
 }
+/**
+ * Set RGBA components of a PTRIVERTEX from an nk_color.
+ *
+ * Maps each 8-bit channel in `col` into the vertex's 16-bit color fields and sets alpha to fully opaque.
+ *
+ * @param tri Pointer to the destination PTRIVERTEX whose color fields will be updated.
+ * @param col Source nk_color providing red, green, blue components (0–255).
+ */
 static void
 nk_gdi_set_vertexColor(PTRIVERTEX tri, struct nk_color col)
 {
@@ -225,6 +314,23 @@ nk_gdi_set_vertexColor(PTRIVERTEX tri, struct nk_color col)
     tri->Alpha = 0xff << 8;
 }
 
+/**
+ * Fill a rectangle with a four-corner color gradient and composite it using alpha blending.
+ *
+ * Draws a rectangle at (x,y) with width w and height h using the specified colors for
+ * the left, top, right, and bottom corners and blends the result into the given device
+ * context honoring per-vertex alpha.
+ *
+ * @param dc Device context used for gradient rendering.
+ * @param x  Left coordinate of the rectangle.
+ * @param y  Top coordinate of the rectangle.
+ * @param w  Width of the rectangle.
+ * @param h  Height of the rectangle.
+ * @param left   Color applied to the left corner.
+ * @param top    Color applied to the top corner.
+ * @param right  Color applied to the right corner.
+ * @param bottom Color applied to the bottom corner.
+ */
 static void
 nk_gdi_rect_multi_color(HDC dc, short x, short y, unsigned short w,
     unsigned short h, struct nk_color left, struct nk_color top,
@@ -269,6 +375,13 @@ nk_gdi_rect_multi_color(HDC dc, short x, short y, unsigned short w,
 
 }
 
+/**
+ * Set the coordinates of a POINT structure.
+ * @param p Pointer to the POINT to modify; must not be NULL.
+ * @param x X coordinate to set.
+ * @param y Y coordinate to set.
+ * @returns `TRUE` if the POINT was updated, `FALSE` if `p` is NULL.
+ */
 static BOOL
 SetPoint(POINT *p, LONG x, LONG y)
 {
@@ -279,6 +392,18 @@ SetPoint(POINT *p, LONG x, LONG y)
     return TRUE;
 }
 
+/**
+ * Fill a triangle on the specified device context using the given color.
+ * 
+ * @param dc Device context to draw into.
+ * @param x0 X coordinate of the first vertex.
+ * @param y0 Y coordinate of the first vertex.
+ * @param x1 X coordinate of the second vertex.
+ * @param y1 Y coordinate of the second vertex.
+ * @param x2 X coordinate of the third vertex.
+ * @param y2 Y coordinate of the third vertex.
+ * @param col Color used to fill the triangle.
+ */
 static void
 nk_gdi_fill_triangle(HDC dc, short x0, short y0, short x1,
     short y1, short x2, short y2, struct nk_color col)
@@ -295,6 +420,19 @@ nk_gdi_fill_triangle(HDC dc, short x0, short y0, short x1,
     Polygon(dc, points, 3);
 }
 
+/**
+ * Draws the outline of a triangle connecting three 2D points using the specified line thickness and color.
+ *
+ * @param dc Device context to draw into.
+ * @param x0 X coordinate of the first vertex.
+ * @param y0 Y coordinate of the first vertex.
+ * @param x1 X coordinate of the second vertex.
+ * @param y1 Y coordinate of the second vertex.
+ * @param x2 X coordinate of the third vertex.
+ * @param y2 Y coordinate of the third vertex.
+ * @param line_thickness Stroke thickness in pixels.
+ * @param col Color used to draw the triangle edges.
+ */
 static void
 nk_gdi_stroke_triangle(HDC dc, short x0, short y0, short x1,
     short y1, short x2, short y2, unsigned short line_thickness, struct nk_color col)
@@ -323,6 +461,17 @@ nk_gdi_stroke_triangle(HDC dc, short x0, short y0, short x1,
     }
 }
 
+/**
+ * Fill a polygon on the given device context using the specified color.
+ *
+ * Draws and fills a polygon defined by `count` points from `pnts` into `dc` using `col`.
+ * If `count` exceeds 64 points, only the first 64 points are used.
+ *
+ * @param dc Device context to draw into.
+ * @param pnts Array of integer 2D points defining the polygon vertices.
+ * @param count Number of points in `pnts`; values greater than 64 are truncated to 64.
+ * @param col Fill color for the polygon.
+ */
 static void
 nk_gdi_fill_polygon(HDC dc, const struct nk_vec2i *pnts, int count, struct nk_color col)
 {
@@ -340,6 +489,20 @@ nk_gdi_fill_polygon(HDC dc, const struct nk_vec2i *pnts, int count, struct nk_co
     #undef MAX_POINTS
 }
 
+/**
+ * Stroke a closed polygon onto the given device context.
+ *
+ * Draws the polygon defined by `count` points in `pnts` by connecting each
+ * point in order and closing the shape back to the first point. Uses a
+ * 1-pixel DC pen when `line_thickness` is 1; otherwise creates a solid pen of
+ * the specified thickness and restores the DC pen afterwards.
+ *
+ * @param dc Device context to draw into.
+ * @param pnts Array of integer 2D points defining the polygon vertices.
+ * @param count Number of points in `pnts`. If zero, nothing is drawn.
+ * @param line_thickness Thickness of the stroke in pixels.
+ * @param col Stroke color as an nk_color.
+ */
 static void
 nk_gdi_stroke_polygon(HDC dc, const struct nk_vec2i *pnts, int count,
     unsigned short line_thickness, struct nk_color col)
@@ -367,6 +530,17 @@ nk_gdi_stroke_polygon(HDC dc, const struct nk_vec2i *pnts, int count,
     }
 }
 
+/**
+ * Draws a connected polyline onto the specified device context.
+ *
+ * Draws straight-line segments connecting the sequence of points in `pnts` in order. If `count` is less than or equal to zero, nothing is drawn.
+ *
+ * @param dc Device context to draw into.
+ * @param pnts Pointer to an array of points (`struct nk_vec2i`) that define the polyline.
+ * @param count Number of points in `pnts`.
+ * @param line_thickness Stroke width in pixels.
+ * @param col Color used for the stroke.
+ */
 static void
 nk_gdi_stroke_polyline(HDC dc, const struct nk_vec2i *pnts,
     int count, unsigned short line_thickness, struct nk_color col)
@@ -393,6 +567,24 @@ nk_gdi_stroke_polyline(HDC dc, const struct nk_vec2i *pnts,
     }
 }
 
+/**
+ * Draws an arc segment outline using the supplied device context.
+ *
+ * Renders an arc centered at (cx, cy) with radius r, spanning the angle range
+ * from amin to amin + adelta (angles in radians). The arc is stroked with
+ * the specified line_thickness and color; thick strokes use a geometric pen
+ * with flat end caps for consistent appearance. The arc is drawn with
+ * counterclockwise arc direction.
+ *
+ * @param dc Device context to draw into.
+ * @param cx X coordinate of the arc center.
+ * @param cy Y coordinate of the arc center.
+ * @param r Radius of the arc in pixels.
+ * @param amin Starting angle in radians.
+ * @param adelta Sweep angle in radians (added to amin to form the end angle).
+ * @param line_thickness Line thickness in pixels.
+ * @param col Color used to stroke the arc.
+ */
 static void
 nk_gdi_stroke_arc(HDC dc, short cx, short cy, unsigned short r, float amin, float adelta, unsigned short line_thickness, struct nk_color col)
 {
@@ -434,6 +626,17 @@ nk_gdi_stroke_arc(HDC dc, short cx, short cy, unsigned short r, float amin, floa
     }
 }
 
+/**
+ * Fill a circular sector (arc) centered at the given point with the specified color.
+ *
+ * @param dc Device context to draw into.
+ * @param cx X coordinate of the arc center (pixels).
+ * @param cy Y coordinate of the arc center (pixels).
+ * @param r  Radius of the arc (pixels).
+ * @param amin Starting angle of the arc, in radians.
+ * @param adelta Sweep angle of the arc, in radians (positive or negative to control direction).
+ * @param col Color used to fill the sector.
+ */
 static void
 nk_gdi_fill_arc(HDC dc, short cx, short cy, unsigned short r, float amin, float adelta, struct nk_color col)
 {
@@ -449,6 +652,16 @@ nk_gdi_fill_arc(HDC dc, short cx, short cy, unsigned short r, float amin, float 
     Pie(dc, cx-r, cy-r, cx+r, cy+r, start_x, start_y, end_x, end_y);
 }
 
+/**
+ * Draws a filled ellipse inside the rectangle defined by (x, y, x + w, y + h) using the given color.
+ *
+ * @param dc   Device context to draw into.
+ * @param x    X coordinate of the rectangle's top-left corner.
+ * @param y    Y coordinate of the rectangle's top-left corner.
+ * @param w    Width of the bounding rectangle.
+ * @param h    Height of the bounding rectangle.
+ * @param col  Color used to fill the ellipse.
+ */
 static void
 nk_gdi_fill_circle(HDC dc, short x, short y, unsigned short w,
     unsigned short h, struct nk_color col)
@@ -459,6 +672,17 @@ nk_gdi_fill_circle(HDC dc, short x, short y, unsigned short w,
     Ellipse(dc, x, y, x + w, y + h);
 }
 
+/**
+ * Draws an outlined ellipse at the given position and size using the specified color and stroke thickness.
+ *
+ * @param dc Device context to draw into; coordinates are in DC units.
+ * @param x Left coordinate of the bounding rectangle.
+ * @param y Top coordinate of the bounding rectangle.
+ * @param w Width of the bounding rectangle.
+ * @param h Height of the bounding rectangle.
+ * @param line_thickness Stroke thickness in pixels.
+ * @param col Color used for the ellipse stroke.
+ */
 static void
 nk_gdi_stroke_circle(HDC dc, short x, short y, unsigned short w,
     unsigned short h, unsigned short line_thickness, struct nk_color col)
@@ -483,6 +707,20 @@ nk_gdi_stroke_circle(HDC dc, short x, short y, unsigned short w,
     }
 }
 
+/**
+ * Draws a cubic Bezier curve defined by four control points using GDI.
+ *
+ * Draws a stroked cubic Bezier curve from p1 to p4 using p2 and p3 as control points,
+ * rendered with the given line thickness and color on the provided device context.
+ *
+ * @param dc Device context to draw into.
+ * @param p1 Starting point of the curve.
+ * @param p2 First control point.
+ * @param p3 Second control point.
+ * @param p4 End point of the curve.
+ * @param line_thickness Stroke thickness in pixels.
+ * @param col Stroke color. 
+ */
 static void
 nk_gdi_stroke_curve(HDC dc, struct nk_vec2i p1,
     struct nk_vec2i p2, struct nk_vec2i p3, struct nk_vec2i p4,
@@ -513,6 +751,25 @@ nk_gdi_stroke_curve(HDC dc, struct nk_vec2i p1,
     }
 }
 
+/**
+ * Draws UTF-8 text into the given device context using the specified font and colors.
+ *
+ * Renders up to `len` bytes of UTF-8 `text` at position (x, y) within the rectangle of size
+ * `w`×`h` on `dc`, using `font` for glyph metrics. The text background is filled with `cbg`
+ * and the text color is `cfg`. If `text` is NULL, `font` is NULL, or `len` is zero, no action
+ * is taken.
+ *
+ * @param dc Device context to draw into.
+ * @param x X coordinate of the text origin.
+ * @param y Y coordinate of the text baseline origin.
+ * @param w Width of the drawing rectangle (unused by some platforms but provided for layout).
+ * @param h Height of the drawing rectangle (unused by some platforms but provided for layout).
+ * @param text UTF-8 encoded text buffer to render.
+ * @param len Number of bytes from `text` to render.
+ * @param font GdiFont to use for rendering (must be non-NULL).
+ * @param cbg Background color for the text area.
+ * @param cfg Foreground (text) color.
+ */
 static void
 nk_gdi_draw_text(HDC dc, short x, short y, unsigned short w, unsigned short h,
     const char *text, int len, GdiFont *font, struct nk_color cbg, struct nk_color cfg)
@@ -534,6 +791,15 @@ nk_gdi_draw_text(HDC dc, short x, short y, unsigned short w, unsigned short h,
     ExtTextOutW(dc, x, y, ETO_OPAQUE, NULL, wstr, wsize, NULL);
 }
 
+/**
+ * Fill the provided device context with the given color.
+ *
+ * Sets the background color of the HDC and fills the full gdi width/height rectangle
+ * using an opaque ExtTextOutW call.
+ *
+ * @param dc   Target device context to clear.
+ * @param col  Fill color used to clear the context.
+ */
 static void
 nk_gdi_clear(HDC dc, struct nk_color col)
 {
@@ -545,6 +811,11 @@ nk_gdi_clear(HDC dc, struct nk_color col)
     ExtTextOutW(dc, 0, 0, ETO_OPAQUE, &rect, NULL, 0, NULL);
 }
 
+/**
+ * Copy the internal offscreen backbuffer to the specified device context.
+ * 
+ * @param dc Destination HDC where the offscreen buffer is blitted.
+ */
 static void
 nk_gdi_blit(HDC dc)
 {
@@ -552,6 +823,15 @@ nk_gdi_blit(HDC dc)
 
 }
 
+/**
+ * Create a GdiFont with the given face name, size, weight, and italic style and initialize its device context and metrics.
+ *
+ * @param name Face name of the font (UTF-8 null-terminated string) or NULL to use the default face.
+ * @param size Height of the font in logical units (positive or negative depending on desired mapping mode).
+ * @param weight Font weight (e.g., FW_NORMAL, FW_BOLD).
+ * @param italic Nonzero to create an italic font, zero for normal.
+ * @returns Pointer to an allocated GdiFont with its HFONT and compatible HDC initialized, or NULL on allocation or creation failure.
+ */
 GdiFont*
 nk_gdifont_create_with_style(const char *name, int size, int weight, BOOL italic)
 {
@@ -567,12 +847,27 @@ nk_gdifont_create_with_style(const char *name, int size, int weight, BOOL italic
     return font;
 }
 
+/**
+ * Create a GdiFont using the specified font face and point size with normal weight and no italics.
+ * @param name Font family name (UTF-8). If NULL or empty, the system default font may be used.
+ * @param size Font size in points.
+ * @return Pointer to a newly allocated GdiFont on success, or NULL on failure.
+ */
 GdiFont*
 nk_gdifont_create(const char *name, int size)
 {
     return nk_gdifont_create_with_style(name, size, FW_NORMAL, FALSE);
 }
 
+/**
+ * Measure the pixel width of a UTF-8 string using the GDI font from the given handle.
+ *
+ * @param handle Font handle containing the GDI font to use for measurement.
+ * @param height Requested font height (unused by this implementation).
+ * @param text UTF-8 encoded string to measure.
+ * @param len Number of bytes in `text`.
+ * @returns Width in pixels of the measured text as a float, `0` if `handle` or `text` is NULL, or `-1.0f` if measurement failed.
+ */
 static float
 nk_gdifont_get_text_width(nk_handle handle, float height, const char *text, int len)
 {
@@ -591,6 +886,14 @@ nk_gdifont_get_text_width(nk_handle handle, float height, const char *text, int 
     return -1.0f;
 }
 
+/**
+ * Release all resources associated with a GdiFont and free its memory.
+ *
+ * Deletes the font's HFONT and HDC, then frees the GdiFont structure.
+ * Does nothing if `font` is NULL.
+ *
+ * @param font Pointer to the GdiFont to delete; the pointer becomes invalid after this call.
+ */
 void
 nk_gdifont_del(GdiFont *font)
 {
@@ -600,6 +903,15 @@ nk_gdifont_del(GdiFont *font)
     free(font);
 }
 
+/**
+ * Paste Unicode text from the system clipboard into a Nuklear text edit.
+ *
+ * If the clipboard contains CF_UNICODETEXT, the function converts it from UTF-16 to UTF-8
+ * and inserts the resulting bytes into the provided nk_text_edit via nk_textedit_paste.
+ *
+ * @param usr Unused clipboard user data (ignored).
+ * @param edit Target text edit to receive pasted text; must be a valid pointer.
+ */
 static void
 nk_gdi_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
@@ -634,6 +946,16 @@ nk_gdi_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
     }
 }
 
+/**
+ * Copy UTF-8 text into the system clipboard as CF_UNICODETEXT.
+ *
+ * Converts the provided UTF-8 buffer to a null-terminated UTF-16 (wide) string,
+ * places it on the Windows clipboard as CF_UNICODETEXT, and closes the clipboard.
+ *
+ * @param usr Unused clipboard user handle (ignored).
+ * @param text Pointer to the UTF-8 encoded text to copy.
+ * @param len Number of bytes in `text`; may be -1 to indicate a null-terminated string.
+ */
 static void
 nk_gdi_clipboard_copy(nk_handle usr, const char *text, int len)
 {
@@ -660,7 +982,16 @@ nk_gdi_clipboard_copy(nk_handle usr, const char *text, int len)
     }
 }
 
-NK_API struct nk_context*
+NK_API struct /**
+ * Initialize a Nuklear context and prepare an offscreen GDI bitmap and memory DC for rendering.
+ *
+ * @param gdifont Pointer to a previously created GdiFont to use as the Nuklear font and metrics.
+ * @param window_dc Device context of the target window where the final image will be blitted.
+ * @param width Initial width of the offscreen bitmap in pixels.
+ * @param height Initial height of the offscreen bitmap in pixels.
+ * @returns Pointer to the initialized nk_context on success; pointer refers to the internal static GDI context.
+ */
+nk_context*
 nk_gdi_init(GdiFont *gdifont, HDC window_dc, unsigned int width, unsigned int height)
 {
     struct nk_user_font *font = &gdifont->nk;
@@ -681,6 +1012,13 @@ nk_gdi_init(GdiFont *gdifont, HDC window_dc, unsigned int width, unsigned int he
     return &gdi.ctx;
 }
 
+/**
+ * Set the active Nuklear font to the provided GdiFont.
+ *
+ * Updates the Nuklear user-font userdata, height, and width callback, and applies it to the global GDI Nuklear context.
+ *
+ * @param gdifont GdiFont to activate as the current Nuklear font; must be non-NULL.
+ */
 NK_API void
 nk_gdi_set_font(GdiFont *gdifont)
 {
@@ -691,6 +1029,18 @@ nk_gdi_set_font(GdiFont *gdifont)
     nk_style_set_font(&gdi.ctx, font);
 }
 
+/**
+ * Handle a Windows message and forward relevant input and window events to the Nuklear GDI backend.
+ *
+ * Processes resize, paint, keyboard, character, and mouse messages to update the backend's GDI state
+ * and to feed input events into the embedded Nuklear context.
+ *
+ * @param wnd   Window handle that received the message.
+ * @param msg   Windows message identifier (e.g., WM_SIZE, WM_PAINT, WM_KEYDOWN).
+ * @param wparam Additional message-specific information (WPARAM).
+ * @param lparam Additional message-specific information (LPARAM).
+ * @returns `1` if the message was handled by the backend and should not be further processed, `0` otherwise.
+ */
 NK_API int
 nk_gdi_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
@@ -921,6 +1271,11 @@ nk_gdi_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
     return 0;
 }
 
+/**
+ * Shutdown the GDI backend and release its resources.
+ *
+ * Deletes the backend's offscreen bitmap and memory device context, and frees the associated Nuklear context and its allocations.
+ */
 NK_API void
 nk_gdi_shutdown(void)
 {
@@ -929,6 +1284,16 @@ nk_gdi_shutdown(void)
     nk_free(&gdi.ctx);
 }
 
+/**
+ * Render the current Nuklear command buffer to the window using Windows GDI.
+ *
+ * Clears the offscreen bitmap with the provided color, processes and draws each
+ * recorded Nuklear command into the memory DC via the backend's GDI drawing
+ * helpers, blits the resulting image to the window device context, and then
+ * clears the Nuklear context.
+ *
+ * @param clear nk_color used to clear the offscreen buffer before drawing.
+ */
 NK_API void
 nk_gdi_render(struct nk_color clear)
 {
@@ -1029,4 +1394,3 @@ nk_gdi_render(struct nk_color clear)
 }
 
 #endif
-

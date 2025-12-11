@@ -15,6 +15,12 @@
     #define FILENO fileno
 #endif
 
+/**
+ * Print an ASCII-art dragon banner followed by a thank-you message to stdout.
+ *
+ * This is a decorative helper that writes multiple lines (including surrounding
+ * blank lines) to standard output.
+ */
 static void print_dragon_banner(void) {
     static const char *art[] = {
         "                      /\\",
@@ -56,6 +62,9 @@ static void print_dragon_banner(void) {
 #define WINDOW_WIDTH 400
 #define WINDOW_HEIGHT 200
 
+/**
+ * Print the ASCII dragon banner to stdout the first time this function is called when stdout is a terminal; subsequent calls do nothing.
+ */
 static void maybe_print_dragon(void) {
     static int printed = 0;
     if (printed) return;
@@ -70,6 +79,15 @@ static void maybe_print_dragon(void) {
     #include <windows.h>
     #include "../vendor/nuklear_gdi.h"
 
+    /**
+     * Window procedure for the application's main window; handles WM_DESTROY and delegates other events to the Nuklear GDI event handler or the default Windows procedure.
+     *
+     * @param wnd Handle to the window receiving the message.
+     * @param msg Message identifier.
+     * @param wparam Additional message information (word-sized).
+     * @param lparam Additional message information (long-sized).
+     * @returns `0` if the message was handled by this procedure or the Nuklear GDI handler, otherwise the value returned by `DefWindowProc`.
+     */
     LRESULT CALLBACK WindowProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam) {
         switch (msg) {
         case WM_DESTROY:
@@ -81,6 +99,15 @@ static void maybe_print_dragon(void) {
         return DefWindowProc(wnd, msg, wparam, lparam);
     }
 
+    /**
+     * Application entry point for the Windows build: initializes configuration and plugins,
+     * creates a Win32 window with Nuklear GDI integration, sets up fonts, and runs the UI event
+     * loop that renders the digital clock and updates plugins until the window closes.
+     *
+     * Performs necessary resource cleanup (device context and fonts) before exiting.
+     *
+     * @returns 0 on normal exit, non-zero on failure (for example, if acquiring the device
+     *          context fails).
     int main(void) {
         GdiFont* font;
         GdiFont* big_font;
@@ -171,6 +198,15 @@ static void maybe_print_dragon(void) {
     #include <X11/Xos.h>
     #include "../vendor/nuklear_xlib.h"
 
+    /**
+     * Program entry point for the X11 variant of the Digital Clock application.
+     *
+     * Initializes configuration and plugin registry, opens the X display, creates a window
+     * and fonts, initializes the Nuklear UI context, runs the main event and render loop
+     * until the window is closed, then shuts down and frees resources.
+     *
+     * @returns 0 on normal exit, 1 if the X display could not be opened.
+     */
     int main(void) {
         Display *dpy;
         Window win;
